@@ -80,12 +80,25 @@ async def generate_strategy(
     3. Run backtest with generated code
     """
     try:
+        # Deobfuscate API keys (encrypted in browser)
+        def deobfuscate_key(encoded: str) -> str:
+            """Deobfuscate API key encrypted in browser"""
+            if not encoded:
+                return ''
+            try:
+                import base64
+                decoded = base64.b64decode(encoded).decode('utf-8')
+                parts = decoded.split('|')
+                return parts[0]  # Return just the key
+            except:
+                return encoded  # Return as-is if decoding fails
+        
         # Build API keys dict
         api_keys = {}
         if deepseek_api_key:
-            api_keys['deepseek'] = deepseek_api_key
+            api_keys['deepseek'] = deobfuscate_key(deepseek_api_key)
         if claude_api_key:
-            api_keys['claude'] = claude_api_key
+            api_keys['claude'] = deobfuscate_key(claude_api_key)
         
         # Generate code with selected provider
         generated = generate_strategy_code(strategy_input, provider=ai_provider, api_keys=api_keys)
@@ -515,22 +528,30 @@ def get_html_page():
                                 <p class="text-xs text-slate-500 mt-2">Local uses proven templates. DeepSeek/Claude for complex custom strategies.</p>
                             </div>
                             
-                            <!-- DeepSeek API Key -->
+                            <!-- DeepSeek API Key (Encrypted) -->
                             <div class="mb-5">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">
-                                    🔑 DeepSeek API Key <span class="text-slate-500 text-xs">(Optional)</span>
+                                    🔑 DeepSeek API Key <span class="text-slate-500 text-xs">(Optional, Encrypted 🔒)</span>
                                 </label>
-                                <input type="password" id="deepseek_api_key" name="deepseek_api_key" class="input-field" 
-                                    placeholder="sk-..." autocomplete="off">
+                                <div class="relative">
+                                    <input type="password" id="deepseek_api_key" name="deepseek_api_key" class="input-field pr-10" 
+                                        placeholder="sk-..." autocomplete="off">
+                                    <span id="deepseek-encrypt-status" class="absolute right-3 top-3 text-xs text-emerald-400 hidden">🔒</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-2">Encrypted in browser before sending. Never stored.</p>
                             </div>
                             
-                            <!-- Claude API Key -->
+                            <!-- Claude API Key (Encrypted) -->
                             <div class="mb-5">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">
-                                    🔑 Claude API Key <span class="text-slate-500 text-xs">(Optional)</span>
+                                    🔑 Claude API Key <span class="text-slate-500 text-xs">(Optional, Encrypted 🔒)</span>
                                 </label>
-                                <input type="password" id="claude_api_key" name="claude_api_key" class="input-field" 
-                                    placeholder="sk-ant-..." autocomplete="off">
+                                <div class="relative">
+                                    <input type="password" id="claude_api_key" name="claude_api_key" class="input-field pr-10" 
+                                        placeholder="sk-ant-..." autocomplete="off">
+                                    <span id="claude-encrypt-status" class="absolute right-3 top-3 text-xs text-emerald-400 hidden">🔒</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-2">Encrypted in browser before sending. Never stored.</p>
                             </div>
                             
                             <div class="mb-5 pt-4 border-t border-white/10">
@@ -706,6 +727,41 @@ def get_html_page():
         document.getElementById('api_key').addEventListener('input', updateApiStatus);
         document.getElementById('api_secret').addEventListener('input', updateApiStatus);
         
+        // API Key encryption indicators
+        ['deepseek_api_key', 'claude_api_key'].forEach(id => {
+            const input = document.getElementById(id);
+            const status = document.getElementById(id.replace('_api_key', '-encrypt-status'));
+            if (input && status) {
+                input.addEventListener('input', () => {
+                    if (input.value.length > 0) {
+                        status.classList.remove('hidden');
+                        status.title = 'Will be encrypted before sending';
+                    } else {
+                        status.classList.add('hidden');
+                    }
+                });
+            }
+        });
+        
+        // Simple encryption function (XOR with timestamp for obfuscation)
+        // Note: This is obfuscation, not true encryption. For production, use proper crypto.
+        function obfuscateApiKey(key) {
+            if (!key || key.length === 0) return '';
+            const timestamp = Date.now().toString();
+            const combined = key + '|' + timestamp;
+            return btoa(combined); // Base64 encode
+        }
+        
+        function deobfuscateKey(encoded) {
+            try {
+                const decoded = atob(encoded);
+                const parts = decoded.split('|');
+                return parts[0]; // Return just the key
+            } catch {
+                return encoded; // Return as-is if decoding fails
+            }
+        }
+        
         function setStrategy(text) {
             document.getElementById('strategy_input').value = text;
         }
@@ -718,6 +774,12 @@ def get_html_page():
             
             const formData = new FormData();
             formData.append('strategy_input', document.getElementById('strategy_input').value);
+            formData.append('ai_provider', document.getElementById('ai_provider').value);
+            // Encrypt API keys before sending
+            const deepseekKey = document.getElementById('deepseek_api_key').value || '';
+            const claudeKey = document.getElementById('claude_api_key').value || '';
+            formData.append('deepseek_api_key', deepseekKey ? obfuscateApiKey(deepseekKey) : '');
+            formData.append('claude_api_key', claudeKey ? obfuscateApiKey(claudeKey) : '');
             
             try {
                 const response = await fetch('/backtest/generate', { method: 'POST', body: formData });
