@@ -30,8 +30,10 @@ def strategy(data):
     return rsi < 30, rsi > 70''',
     
     'macd': '''import numpy as np
+
 def compute_ema(data, period):
-    ema = np.zeros_like(data)
+    """Calculate Exponential Moving Average"""
+    ema = np.zeros(len(data))
     ema[0] = data[0]
     multiplier = 2.0 / (period + 1)
     for i in range(1, len(data)):
@@ -39,21 +41,30 @@ def compute_ema(data, period):
     return ema
 
 def strategy(data):
+    """MACD Crossover Strategy - Buy when MACD crosses above signal line"""
     close = data['close']
+    
+    # Calculate EMAs
     ema12 = compute_ema(close, 12)
     ema26 = compute_ema(close, 26)
+    
+    # Calculate MACD and Signal
     macd_line = ema12 - ema26
     signal_line = compute_ema(macd_line, 9)
     
-    # Generate signals
+    # Initialize signals
     buy_signals = np.zeros(len(close), dtype=bool)
     sell_signals = np.zeros(len(close), dtype=bool)
     
-    # MACD crossover (MACD crosses above signal)
-    for i in range(30, len(close)):
-        if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+    # Detect crossovers
+    macd_above = macd_line > signal_line
+    
+    for i in range(1, len(close)):
+        # Buy: MACD crosses FROM below TO above signal
+        if macd_above[i] and not macd_above[i-1]:
             buy_signals[i] = True
-        elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+        # Sell: MACD crosses FROM above TO below signal  
+        elif not macd_above[i] and macd_above[i-1]:
             sell_signals[i] = True
     
     return buy_signals, sell_signals''',
