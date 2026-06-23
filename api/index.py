@@ -1,6 +1,6 @@
 """
 StrategyAI - Vercel Serverless Function
-Modern dark mode UI with professional trading dashboard design
+Professional trading dashboard with API key management
 """
 
 from fastapi import FastAPI, Form
@@ -70,7 +70,7 @@ async def backtest(
         if 'error' in generated:
             return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
         
-        # Run backtest
+        # Run backtest - use provided API key or public API
         results = run_backtest(
             code=generated['code'],
             symbol=symbol,
@@ -78,8 +78,8 @@ async def backtest(
             initial_capital=initial_capital,
             fee_rate=fee_rate / 100,
             slippage=slippage / 100,
-            api_key=api_key if api_key else None,
-            api_secret=api_secret if api_secret else None,
+            api_key=api_key if api_key and api_key.strip() else None,
+            api_secret=api_secret if api_secret and api_secret.strip() else None,
         )
         
         if 'error' in results:
@@ -235,12 +235,6 @@ def get_html_page():
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .info-banner {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-        }
         pre {
             background: #0f172a;
             border: 1px solid rgba(148, 163, 184, 0.2);
@@ -248,38 +242,44 @@ def get_html_page():
             padding: 20px;
             overflow-x: auto;
         }
+        .api-status {
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 0.875rem;
+        }
+        .api-status.connected {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        .api-status.public {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+        }
+        .collapsible {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .collapsible.open {
+            max-height: 500px;
+        }
     </style>
 </head>
 <body class="min-h-screen">
     <header class="py-8 border-b border-white/5">
         <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-5xl font-bold mb-2">
-                        <span class="gradient-text">🚀 StrategyAI</span>
-                    </h1>
-                    <p class="text-xl text-slate-400">AI-Powered Trading Strategy Backtester</p>
-                </div>
-                <div class="hidden md:flex items-center space-x-4">
-                    <a href="https://github.com/Vage1000600/strategyai" target="_blank" class="btn-secondary text-sm">GitHub</a>
-                    <a href="https://www.bitget.com/activity-hub/hackathon" target="_blank" class="btn-secondary text-sm">🏆 Hackathon</a>
-                </div>
-            </div>
+            <h1 class="text-5xl font-bold mb-2">
+                <span class="gradient-text">🚀 StrategyAI</span>
+            </h1>
+            <p class="text-xl text-slate-400">AI-Powered Trading Strategy Backtester</p>
         </div>
     </header>
 
     <main class="container mx-auto px-4 pb-12">
         <div class="max-w-7xl mx-auto">
-            <div class="info-banner mb-8">
-                <div class="flex items-center">
-                    <span class="text-2xl mr-3">🎉</span>
-                    <div>
-                        <strong class="text-emerald-400">No Setup Required!</strong>
-                        <span class="text-slate-300 ml-2">Using public Bitget API</span>
-                    </div>
-                </div>
-            </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="lg:col-span-1">
                     <div class="glass-card p-6 sticky top-8">
@@ -288,8 +288,31 @@ def get_html_page():
                             Settings
                         </h2>
                         
+                        <!-- API Status -->
+                        <div id="api_status" class="api-status public">
+                            <span id="api_status_icon">🌐</span>
+                            <span id="api_status_text">Using public API</span>
+                        </div>
+                        
                         <form id="backtestForm" onsubmit="runBacktest(event)">
+                            <!-- API Credentials -->
                             <div class="mb-5">
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">
+                                    🔑 Bitget API Key <span class="text-slate-500 text-xs">(Optional)</span>
+                                </label>
+                                <input type="password" id="api_key" name="api_key" class="input-field" 
+                                    placeholder="Leave empty for public API">
+                            </div>
+                            
+                            <div class="mb-5">
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">
+                                    🔐 API Secret <span class="text-slate-500 text-xs">(Optional)</span>
+                                </label>
+                                <input type="password" id="api_secret" name="api_secret" class="input-field" 
+                                    placeholder="Leave empty for public API">
+                            </div>
+                            
+                            <div class="mb-5 pt-4 border-t border-white/10">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">📊 Trading Pair</label>
                                 <select id="symbol" name="symbol" class="input-field">
                                     <option value="BTC/USDT">BTC/USDT</option>
@@ -408,6 +431,29 @@ def get_html_page():
     </footer>
 
     <script>
+        // Update API status based on input
+        function updateApiStatus() {
+            const apiKey = document.getElementById('api_key').value.trim();
+            const apiSecret = document.getElementById('api_secret').value.trim();
+            const statusDiv = document.getElementById('api_status');
+            const statusIcon = document.getElementById('api_status_icon');
+            const statusText = document.getElementById('api_status_text');
+            
+            if (apiKey && apiSecret) {
+                statusDiv.className = 'api-status connected';
+                statusIcon.textContent = '✅';
+                statusText.textContent = 'Using your Bitget API key';
+            } else {
+                statusDiv.className = 'api-status public';
+                statusIcon.textContent = '🌐';
+                statusText.textContent = 'Using public API';
+            }
+        }
+        
+        // Listen for input changes
+        document.getElementById('api_key').addEventListener('input', updateApiStatus);
+        document.getElementById('api_secret').addEventListener('input', updateApiStatus);
+        
         function setStrategy(text) {
             document.getElementById('strategy_input').value = text;
         }
@@ -423,6 +469,12 @@ def get_html_page():
             formData.append('strategy_input', document.getElementById('strategy_input').value);
             formData.append('symbol', document.getElementById('symbol').value);
             formData.append('timeframe', document.getElementById('timeframe').value);
+            
+            // Add API credentials if provided
+            const apiKey = document.getElementById('api_key').value.trim();
+            const apiSecret = document.getElementById('api_secret').value.trim();
+            if (apiKey) formData.append('api_key', apiKey);
+            if (apiSecret) formData.append('api_secret', apiSecret);
             
             try {
                 const response = await fetch('/backtest', { method: 'POST', body: formData });
@@ -493,6 +545,9 @@ def get_html_page():
                 document.getElementById('loading').classList.add('hidden');
             }
         }
+        
+        // Initialize status on load
+        updateApiStatus();
     </script>
 </body>
 </html>'''
