@@ -1,22 +1,49 @@
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
-import json
+"""
+StrategyAI - Vercel Serverless Function
+With error handling and logging
+"""
+
 import sys
 import os
+import traceback
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Try to import FastAPI
+try:
+    from fastapi import FastAPI, Request, Form
+    from fastapi.responses import HTMLResponse, JSONResponse
+    FASTAPI_OK = True
+except Exception as e:
+    FASTAPI_OK = False
+    print(f"FastAPI import failed: {e}")
 
-from ai_generator import generate_strategy_code
-from backtester import run_backtest
+# Try to import backend modules
+try:
+    # Add parent directory to path
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, parent_dir)
+    
+    from ai_generator import generate_strategy_code
+    from backtester import run_backtest
+    BACKEND_OK = True
+except Exception as e:
+    BACKEND_OK = False
+    print(f"Backend import failed: {e}")
+    traceback.print_exc()
 
-app = FastAPI(title="StrategyAI")
+# Create FastAPI app
+if FASTAPI_OK:
+    app = FastAPI(title="StrategyAI")
+else:
+    app = None
 
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the main HTML page"""
-    return HTMLResponse(content=get_html_page())
+    try:
+        return HTMLResponse(content=get_html_page())
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error loading page: {e}</h1>", status_code=500)
 
 
 @app.post("/backtest")
@@ -32,6 +59,13 @@ async def backtest(
 ):
     """Run backtest on a strategy"""
     try:
+        # Check if backend loaded
+        if not BACKEND_OK:
+            return JSONResponse({
+                'success': False,
+                'error': 'Backend modules failed to load. Check deployment logs.'
+            }, status_code=500)
+        
         # Generate code
         generated = generate_strategy_code(strategy_input)
         if 'error' in generated:
@@ -85,7 +119,24 @@ async def backtest(
         })
         
     except Exception as e:
-        return JSONResponse({'success': False, 'error': str(e)}, status_code=500)
+        error_trace = traceback.format_exc()
+        print(f"Backtest error: {error_trace}")
+        return JSONResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': error_trace
+        }, status_code=500)
+
+
+# Health check endpoint
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    return {
+        'status': 'ok',
+        'fastapi_loaded': FASTAPI_OK,
+        'backend_loaded': BACKEND_OK
+    }
 
 
 def get_html_page():
