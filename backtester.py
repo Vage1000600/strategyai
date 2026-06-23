@@ -8,6 +8,7 @@ Features:
 ✅ User can override with personal key
 ✅ Buy & Hold benchmark comparison
 ✅ Expanded risk metrics
+✅ Code validation before execution
 """
 
 import ccxt
@@ -378,7 +379,8 @@ class Backtester:
 
 def run_backtest(code: str, symbol: str, timeframe: str, initial_capital: float, 
                  fee_rate: float = 0.001, slippage: float = 0.0005,
-                 api_key: Optional[str] = None, api_secret: Optional[str] = None) -> Dict:
+                 api_key: Optional[str] = None, api_secret: Optional[str] = None,
+                 validate: bool = True) -> Dict:
     """
     Main backtest function.
     
@@ -391,21 +393,51 @@ def run_backtest(code: str, symbol: str, timeframe: str, initial_capital: float,
         slippage: Slippage (default 0.05%)
         api_key: User's Bitget API key (optional)
         api_secret: User's Bitget API secret (optional)
+        validate: Run validation checks before execution (default True)
         
     Returns:
-        Dict with backtest results
+        Dict with backtest results including validation info
     """
     try:
-        # Fetch data (uses public API if no key provided)
+        # Step 1: Validate code structure and syntax
+        if validate:
+            from ai_generator import validate_strategy, test_strategy_execution
+            
+            validation = validate_strategy(code)
+            if not validation['valid']:
+                return {
+                    'error': 'Code validation failed',
+                    'validation_errors': validation['errors'],
+                    'validation_warnings': validation['warnings']
+                }
+        
+        # Step 2: Fetch data (uses public API if no key provided)
         fetcher = BitgetDataFetcher(api_key, api_secret)
         df = fetcher.fetch_ohlcv(symbol, timeframe, limit=500)
         
-        # Run backtest
+        # Step 3: Test execution on small sample (optional safety check)
+        if validate:
+            test_data = {
+                'open': df['open'].values[:50],
+                'high': df['high'].values[:50],
+                'low': df['low'].values[:50],
+                'close': df['close'].values[:50],
+                'volume': df['volume'].values[:50]
+            }
+            from ai_generator import test_strategy_execution
+            exec_test = test_strategy_execution(code, test_data)
+            if not exec_test['success']:
+                return {
+                    'error': f'Execution test failed: {exec_test["error"]}'
+                }
+        
+        # Step 4: Run full backtest
         backtester = Backtester(initial_capital, fee_rate, slippage)
         results = backtester.run(df, code)
         
-        # Add info about API mode
+        # Add info about API mode and validation
         results['using_public_api'] = fetcher.using_public
+        results['validated'] = validate
         
         return results
         

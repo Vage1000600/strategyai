@@ -1,6 +1,6 @@
 """
 StrategyAI - Vercel Serverless Function
-Professional trading dashboard with API key management
+Two-step flow: Generate code → Review → Execute backtest
 """
 
 from fastapi import FastAPI, Form
@@ -14,7 +14,7 @@ from datetime import datetime
 # Add parent directory to path for backend imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ai_generator import generate_strategy_code
+from ai_generator import generate_strategy_code, validate_strategy
 from backtester import run_backtest
 
 # Create FastAPI app - MUST be at module level for Vercel
@@ -45,7 +45,7 @@ def convert_timestamps(obj):
     elif isinstance(obj, float):
         # Handle inf, -inf, and nan
         if math.isinf(obj):
-            return None  # or 0.0, depending on preference
+            return None
         elif math.isnan(obj):
             return None
         else:
@@ -62,35 +62,91 @@ async def root():
     return HTMLResponse(content=get_html_page())
 
 
+@app.post("/backtest/generate")
+async def generate_strategy(
+    strategy_input: str = Form(...),
+):
+    """Generate strategy code from natural language - show to user for review
+    
+    TWO-STEP FLOW:
+    1. Generate code (this endpoint)
+    2. Review & optionally edit code
+    3. Run backtest with generated code
+    """
+    try:
+        # Generate code
+        generated = generate_strategy_code(strategy_input)
+        if 'error' in generated:
+            return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
+        
+        # Validate the generated code
+        validation = validate_strategy(generated['code'])
+        
+        return JSONResponse({
+            'success': True,
+            'code': generated['code'],
+            'strategy_type': generated.get('strategy_type', 'Custom'),
+            'indicators': generated.get('indicators', []),
+            'reasoning': generated.get('reasoning', ''),
+            'validation': {
+                'valid': validation['valid'],
+                'errors': validation['errors'],
+                'warnings': validation['warnings']
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        return JSONResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status_code=500)
+
+
 @app.post("/backtest")
-async def backtest(
+async def run_backtest_endpoint(
     strategy_input: str = Form(...),
     symbol: str = Form("BTC/USDT"),
     timeframe: str = Form("1h"),
     initial_capital: float = Form(1000.0),
     fee_rate: float = Form(0.1),
     slippage: float = Form(0.05),
+    generated_code: str = Form(None),
     api_key: str = Form(None),
     api_secret: str = Form(None),
 ):
-    """Run backtest on a strategy
+    """Run backtest on a strategy (uses generated_code if provided, otherwise generates new)
     
-    SECURITY: API credentials are NEVER logged or stored.
-    They are only used for the current request and discarded.
+    If generated_code is provided, uses that code directly.
+    If not provided, generates code from strategy_input first.
     """
     try:
         # SECURITY: Do not log API credentials
         has_api_key = bool(api_key and api_key.strip())
         
-        # Generate code
-        generated = generate_strategy_code(strategy_input)
-        if 'error' in generated:
-            return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
+        # Generate code if not provided
+        if not generated_code:
+            generated = generate_strategy_code(strategy_input)
+            if 'error' in generated:
+                return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
+            code = generated['code']
+        else:
+            code = generated_code
+        
+        # Validate the code
+        validation = validate_strategy(code)
+        if not validation['valid']:
+            return JSONResponse({
+                'success': False,
+                'error': 'Code validation failed',
+                'validation_errors': validation['errors']
+            })
         
         # Run backtest - use provided API key or public API
         # NOTE: api_key and api_secret are NEVER logged
         results = run_backtest(
-            code=generated['code'],
+            code=code,
             symbol=symbol,
             timeframe=timeframe,
             initial_capital=initial_capital,
@@ -98,6 +154,7 @@ async def backtest(
             slippage=slippage / 100,
             api_key=api_key if has_api_key else None,
             api_secret=api_secret if has_api_key and api_secret else None,
+            validate=True
         )
         
         if 'error' in results:
@@ -115,8 +172,9 @@ async def backtest(
         # Convert all non-serializable objects
         results_clean = convert_timestamps({
             'success': True,
-            'code': generated['code'],
-            'strategy_type': generated.get('strategy_type', 'Unknown'),
+            'code': code,
+            'strategy_type': generated.get('strategy_type', 'Custom') if not generated_code else 'Custom',
+            'indicators': generated.get('indicators', []) if not generated_code else [],
             'metrics': {
                 'pnl': float(results['pnl']),
                 'return_pct': float(results['return_pct']),
@@ -135,6 +193,7 @@ async def backtest(
             },
             'trades': trades,
             'using_public_api': results.get('using_public_api', False),
+            'validated': True
         })
         
         return JSONResponse(content=results_clean)
@@ -216,6 +275,20 @@ def get_html_page():
             background: rgba(148, 163, 184, 0.2);
             border-color: rgba(148, 163, 184, 0.4);
         }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+        }
         .input-field {
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(148, 163, 184, 0.2);
@@ -259,6 +332,8 @@ def get_html_page():
             border-radius: 12px;
             padding: 20px;
             overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
         }
         .api-status {
             padding: 12px;
@@ -276,13 +351,15 @@ def get_html_page():
             border: 1px solid rgba(251, 191, 36, 0.3);
             color: #fbbf24;
         }
-        .collapsible {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
+        .validation-pass {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
         }
-        .collapsible.open {
-            max-height: 500px;
+        .validation-fail {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
         }
     </style>
 </head>
@@ -342,7 +419,6 @@ def get_html_page():
                                 </div>
                             </div>
                             
-                            <!-- Security Notice -->
                             <div class="mb-5 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
                                 <div class="flex items-start">
                                     <span class="text-lg mr-2">🔒</span>
@@ -389,7 +465,7 @@ def get_html_page():
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn-primary w-full">
+                            <button type="submit" id="submit_btn" class="btn-primary w-full">
                                 <span class="flex items-center justify-center">
                                     <span class="mr-2">🚀</span>
                                     Generate & Backtest
@@ -400,12 +476,34 @@ def get_html_page():
                 </div>
 
                 <div class="lg:col-span-2 space-y-6">
+                    <!-- Loading State -->
                     <div id="loading" class="hidden glass-card p-12 text-center">
                         <div class="loader mx-auto mb-4"></div>
                         <p class="text-xl font-semibold text-slate-300">🤖 AI is generating...</p>
                         <p class="text-slate-500 mt-2">This takes 5-10 seconds</p>
                     </div>
 
+                    <!-- Code Review Section (shown after generation) -->
+                    <div id="code_review" class="hidden glass-card p-6">
+                        <h3 class="text-xl font-bold mb-4">💻 Generated Strategy Code</h3>
+                        
+                        <div id="code_validation" class="mb-4 p-3 rounded-lg text-sm font-semibold">
+                            <!-- Validation status will be shown here -->
+                        </div>
+                        
+                        <pre id="generated_code"><code></code></pre>
+                        
+                        <div class="flex gap-4 mt-4">
+                            <button type="button" onclick="editCode()" class="btn-secondary">
+                                ✏️ Edit Code
+                            </button>
+                            <button type="button" onclick="runBacktestFromCode()" class="btn-success">
+                                🚀 Run Backtest
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
                     <div id="results" class="space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div class="metric-card">
@@ -450,11 +548,12 @@ def get_html_page():
                         </div>
 
                         <div class="glass-card p-6">
-                            <h3 class="text-xl font-bold mb-4">💻 Generated Code</h3>
-                            <pre id="generated_code"><code class="text-sm text-emerald-400">def strategy(data):<br>&nbsp;&nbsp;# Strategy code will appear here...</code></pre>
+                            <h3 class="text-xl font-bold mb-4">💻 Final Generated Code</h3>
+                            <pre id="final_code"><code class="text-sm text-emerald-400">def strategy(data):<br>&nbsp;&nbsp;# Strategy code will appear here...</code></pre>
                         </div>
                     </div>
 
+                    <!-- Error Message -->
                     <div id="error" class="hidden glass-card p-6 bg-red-500/10 border-l-4 border-red-500">
                         <h3 class="text-xl font-bold text-red-400 mb-2">❌ Error</h3>
                         <p id="error_message" class="text-red-300"></p>
@@ -471,6 +570,8 @@ def get_html_page():
     </footer>
 
     <script>
+        let currentCode = null;
+        
         // Toggle password visibility
         function toggleVisibility(fieldId) {
             const field = document.getElementById(fieldId);
@@ -504,8 +605,58 @@ def get_html_page():
             document.getElementById('strategy_input').value = text;
         }
         
-        async function runBacktest(event) {
-            event.preventDefault();
+        async function generateCode() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('code_review').classList.add('hidden');
+            
+            const formData = new FormData();
+            formData.append('strategy_input', document.getElementById('strategy_input').value);
+            
+            try {
+                const response = await fetch('/backtest/generate', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentCode = data.code;
+                    
+                    // Show validation status
+                    const validationDiv = document.getElementById('code_validation');
+                    if (data.validation.valid) {
+                        validationDiv.className = 'validation-pass p-3 rounded-lg text-sm font-semibold';
+                        validationDiv.innerHTML = '✅ <strong>Code Validated!</strong> No syntax or security errors detected.';
+                    } else {
+                        validationDiv.className = 'validation-fail p-3 rounded-lg text-sm font-semibold';
+                        validationDiv.innerHTML = '❌ <strong>Validation Failed:</strong> ' + data.validation.errors.join(', ');
+                    }
+                    
+                    // Show code
+                    document.getElementById('generated_code').innerHTML = data.code
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/def/g, '<span class="text-purple-400">def</span>')
+                        .replace(/return/g, '<span class="text-purple-400">return</span>')
+                        .replace(/import/g, '<span class="text-purple-400">import</span>');
+                    
+                    document.getElementById('code_review').classList.remove('hidden');
+                } else {
+                    document.getElementById('error_message').textContent = data.error;
+                    document.getElementById('error').classList.remove('hidden');
+                }
+            } catch (err) {
+                document.getElementById('error_message').textContent = 'Error: ' + err.message;
+                document.getElementById('error').classList.remove('hidden');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+        
+        async function runBacktestFromCode() {
+            if (!currentCode) {
+                alert('No code generated yet. Click "Generate & Backtest" first.');
+                return;
+            }
             
             document.getElementById('loading').classList.remove('hidden');
             document.getElementById('results').classList.add('hidden');
@@ -515,6 +666,7 @@ def get_html_page():
             formData.append('strategy_input', document.getElementById('strategy_input').value);
             formData.append('symbol', document.getElementById('symbol').value);
             formData.append('timeframe', document.getElementById('timeframe').value);
+            formData.append('generated_code', currentCode);
             
             // Add API credentials if provided
             const apiKey = document.getElementById('api_key').value.trim();
@@ -546,7 +698,12 @@ def get_html_page():
                     outperfEl.textContent = (outperf >= 0 ? '+' : '') + outperf.toFixed(2) + '%';
                     outperfEl.className = 'text-2xl font-bold ' + (outperf >= 0 ? 'text-emerald-400' : 'text-red-400');
                     
-                    document.getElementById('generated_code').textContent = data.code;
+                    document.getElementById('final_code').innerHTML = data.code
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/def/g, '<span class="text-purple-400">def</span>')
+                        .replace(/return/g, '<span class="text-purple-400">return</span>')
+                        .replace(/import/g, '<span class="text-purple-400">import</span>');
                     
                     const equityTrace = {
                         x: Array.from({length: data.charts.equity.length}, (_, i) => i),
@@ -589,6 +746,32 @@ def get_html_page():
                 document.getElementById('error').classList.remove('hidden');
             } finally {
                 document.getElementById('loading').classList.add('hidden');
+            }
+        }
+        
+        function editCode() {
+            const codeArea = document.getElementById('generated_code');
+            const newCode = prompt('Edit your strategy code:', codeArea.textContent);
+            if (newCode) {
+                currentCode = newCode;
+                codeArea.innerHTML = newCode
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/def/g, '<span class="text-purple-400">def</span>')
+                    .replace(/return/g, '<span class="text-purple-400">return</span>')
+                    .replace(/import/g, '<span class="text-purple-400">import</span>');
+            }
+        }
+        
+        async function runBacktest(event) {
+            event.preventDefault();
+            
+            // First generate code
+            await generateCode();
+            
+            // If code was generated successfully, run backtest
+            if (currentCode) {
+                await runBacktestFromCode();
             }
         }
         
