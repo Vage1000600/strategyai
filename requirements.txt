@@ -1,0 +1,21 @@
+# StrategyAI - Dependencies
+# Install with: pip install -r requirements.txt
+
+# Frontend
+streamlit==1.35.0
+plotly==5.22.0
+
+# AI
+openai==1.35.0  # DeepSeek uses OpenAI-compatible API
+
+# Data & Backtesting
+pandas==2.2.2
+numpy==1.26.4
+ccxt==4.3.50  # Crypto exchange API (includes Bitget)
+requests==2.32.3
+
+# Environment
+python-dotenv==1.0.1
+
+# Testing (optional)
+pytest==8.2.2
