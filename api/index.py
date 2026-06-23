@@ -1,49 +1,28 @@
 """
 StrategyAI - Vercel Serverless Function
-With error handling and logging
+Clean FastAPI app - no conditional imports
 """
 
-import sys
+from fastapi import FastAPI, Form
+from fastapi.responses import HTMLResponse, JSONResponse
+import json
 import os
-import traceback
+import sys
 
-# Try to import FastAPI
-try:
-    from fastapi import FastAPI, Request, Form
-    from fastapi.responses import HTMLResponse, JSONResponse
-    FASTAPI_OK = True
-except Exception as e:
-    FASTAPI_OK = False
-    print(f"FastAPI import failed: {e}")
+# Add parent directory to path for backend imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Try to import backend modules
-try:
-    # Add parent directory to path
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sys.path.insert(0, parent_dir)
-    
-    from ai_generator import generate_strategy_code
-    from backtester import run_backtest
-    BACKEND_OK = True
-except Exception as e:
-    BACKEND_OK = False
-    print(f"Backend import failed: {e}")
-    traceback.print_exc()
+from ai_generator import generate_strategy_code
+from backtester import run_backtest
 
-# Create FastAPI app
-if FASTAPI_OK:
-    app = FastAPI(title="StrategyAI")
-else:
-    app = None
+# Create FastAPI app - MUST be at module level for Vercel
+app = FastAPI(title="StrategyAI")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the main HTML page"""
-    try:
-        return HTMLResponse(content=get_html_page())
-    except Exception as e:
-        return HTMLResponse(content=f"<h1>Error loading page: {e}</h1>", status_code=500)
+    return HTMLResponse(content=get_html_page())
 
 
 @app.post("/backtest")
@@ -59,13 +38,6 @@ async def backtest(
 ):
     """Run backtest on a strategy"""
     try:
-        # Check if backend loaded
-        if not BACKEND_OK:
-            return JSONResponse({
-                'success': False,
-                'error': 'Backend modules failed to load. Check deployment logs.'
-            }, status_code=500)
-        
         # Generate code
         generated = generate_strategy_code(strategy_input)
         if 'error' in generated:
@@ -119,43 +91,32 @@ async def backtest(
         })
         
     except Exception as e:
-        error_trace = traceback.format_exc()
-        print(f"Backtest error: {error_trace}")
-        return JSONResponse({
-            'success': False,
-            'error': str(e),
-            'traceback': error_trace
-        }, status_code=500)
+        return JSONResponse({'success': False, 'error': str(e)}, status_code=500)
 
 
-# Health check endpoint
 @app.get("/health")
 async def health():
-    """Health check endpoint"""
-    return {
-        'status': 'ok',
-        'fastapi_loaded': FASTAPI_OK,
-        'backend_loaded': BACKEND_OK
-    }
+    """Health check"""
+    return {'status': 'ok'}
 
 
 def get_html_page():
-    """Return the HTML page"""
+    """Return HTML page"""
     return '''<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StrategyAI - AI Trading Strategy Backtester</title>
+    <title>StrategyAI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
-    <style>.gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); } .card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }</style>
+    <style>.gradient-bg{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}.card{background:rgba(255,255,255,0.95);backdrop-filter:blur(10px)}</style>
 </head>
 <body class="gradient-bg min-h-screen">
-    <header class="py-8"><div class="container mx-auto px-4"><h1 class="text-5xl font-bold text-white text-center mb-2">🚀 StrategyAI</h1><p class="text-xl text-white text-center opacity-90">Describe Your Strategy. We'll Code It. Backtest It. Optimize It.</p></div></header>
+    <header class="py-8"><div class="container mx-auto px-4"><h1 class="text-5xl font-bold text-white text-center mb-2">🚀 StrategyAI</h1><p class="text-xl text-white text-center opacity-90">Describe Your Strategy. We'll Code It. Backtest It.</p></div></header>
     <main class="container mx-auto px-4 pb-12">
         <div class="max-w-6xl mx-auto">
-            <div class="bg-green-500 text-white p-4 rounded-lg mb-6 text-center"><strong>🎉 No Setup Required!</strong> Using public Bitget API.</div>
+            <div class="bg-green-500 text-white p-4 rounded-lg mb-6 text-center"><strong>🎉 No Setup Required!</strong> Using public Bitget API</div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-1"><div class="card rounded-xl p-6 shadow-xl">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">⚙️ Settings</h2>
