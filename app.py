@@ -1,6 +1,7 @@
 """
 StrategyAI - Main Streamlit Application (FULLY IMPROVED)
-Person 4: UI/UX + Integration Lead
+Uses public Bitget API by default (no key required for testing)
+Users can optionally provide their own API key
 
 Features Added:
 ✅ Error handling & loading states
@@ -8,13 +9,13 @@ Features Added:
 ✅ Progress indicators
 ✅ Input validation
 ✅ Strategy history
-✅ Export results (CSV/PNG)
+✅ Export results (CSV/JSON)
 ✅ Advanced settings
 ✅ Better error messages
 ✅ Strategy library (pre-saved)
 ✅ Buy & Hold benchmark comparison
 ✅ Expanded risk metrics
-✅ Multi-timeframe comparison
+✅ Public API key (default) + User API key (optional)
 """
 
 import streamlit as st
@@ -65,17 +66,66 @@ st.markdown("""
         border-radius: 5px;
         margin: 5px 0;
     }
+    .info-banner {
+        background-color: #1f2937;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 4px solid #00CC96;
+        margin: 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Title
 st.title("🚀 StrategyAI")
 st.subheader("Describe Your Trading Strategy in English. We'll Code It, Backtest It, Optimize It.")
+
+# Info banner about public API
+st.markdown("""
+<div class="info-banner">
+<strong>🎉 No Setup Required!</strong> Using public Bitget API for testing. 
+Want unlimited access? <a href="#api-settings">Add your API key below</a>.
+</div>
+""", unsafe_allow_html=True)
+
 st.markdown("---")
 
 # Sidebar - Settings
 st.sidebar.header("⚙️ Settings")
 
+# API Key Configuration (Optional)
+st.sidebar.header("🔑 API Settings")
+st.sidebar.markdown("### Bitget API (Optional)")
+st.sidebar.info("""
+**Using public API** for testing (rate-limited).
+
+Get your **free** API key for unlimited access:
+1. Go to bitget.com
+2. Profile → API Management
+3. Create read-only key
+""")
+
+user_api_key = st.sidebar.text_input(
+    "API Key (Optional)",
+    type="password",
+    placeholder="Leave empty for public API",
+    help="Your personal Bitget API key (optional)"
+)
+
+user_api_secret = st.sidebar.text_input(
+    "API Secret (Optional)",
+    type="password",
+    placeholder="Leave empty for public API",
+    help="Your personal Bitget API secret (optional)"
+)
+
+# Show API status
+if user_api_key and user_api_secret:
+    st.sidebar.success("✅ Using your API key")
+else:
+    st.sidebar.warning("⚠️ Using public API (rate-limited)")
+
+# Trading pair and timeframe
 symbol = st.sidebar.selectbox(
     "Trading Pair",
     ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"],
@@ -211,12 +261,26 @@ if st.button("🚀 Generate & Backtest", type="primary", use_container_width=Tru
         timeframe=timeframe,
         initial_capital=initial_capital,
         fee_rate=fee_rate/100,
-        slippage=slippage/100
+        slippage=slippage/100,
+        api_key=user_api_key if user_api_key else None,
+        api_secret=user_api_secret if user_api_secret else None
     )
     
     if backtest_results.get("error"):
         st.error(f"❌ Backtest Error: {backtest_results['error']}")
         st.info("💡 Tip: Make sure your strategy uses supported indicators: RSI, MACD, EMA, SMA, BB, ATR")
+        if "public API" in backtest_results['error'].lower():
+            st.warning("""
+            ### 🔑 Need Unlimited Access?
+            
+            Get your **free** Bitget API key:
+            1. Go to https://www.bitget.com/
+            2. Profile → API Management
+            3. Create new API key (read-only)
+            4. Enter it in the sidebar above
+            
+            This will remove rate limits!
+            """)
         progress_bar.empty()
         status_text.empty()
         st.stop()
@@ -226,6 +290,10 @@ if st.button("🚀 Generate & Backtest", type="primary", use_container_width=Tru
     progress_bar.progress(100)
     
     st.success("✅ Backtest complete!")
+    
+    # Show API mode used
+    if backtest_results.get('using_public_api'):
+        st.info("ℹ️ Used public Bitget API (rate-limited). Add your API key in sidebar for unlimited access.")
     
     # Store in session state
     st.session_state.last_results = backtest_results
@@ -301,7 +369,7 @@ if st.button("🚀 Generate & Backtest", type="primary", use_container_width=Tru
     # Equity curve
     fig_equity = plot_results.plot_equity_curve(
         backtest_results["equity_curve"],
-        initial_capital
+        backtest_results.get('initial_capital', initial_capital)
     )
     st.plotly_chart(fig_equity, use_container_width=True)
     

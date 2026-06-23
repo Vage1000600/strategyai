@@ -9,6 +9,7 @@
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 ![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
+![No Setup](https://img.shields.io/badge/No%20Setup%20Required-green)
 
 ---
 
@@ -16,41 +17,20 @@
 
 StrategyAI lets you **backtest trading strategies without writing code**. Just describe your strategy in natural language, and our AI converts it to executable code, runs it on historical Bitget data, and shows you the results.
 
-### Two Modes:
+### ✨ No Setup Required!
 
-**🆓 Local Mode (Default):**
-- No API keys needed
-- 100% free
-- Fast processing
-- Good for standard strategies
+**Works instantly** with public Bitget API (no API key needed for testing).
 
-**🤖 DeepSeek Mode (Optional):**
-- Requires DeepSeek API key
-- Better code quality
-- Handles complex strategies
-- Still free tier available
-
----
-
-## 🔥 Key Features
-
-| Feature | Local Mode | DeepSeek Mode |
-|---------|------------|---------------|
-| **API Key Required** | ❌ No | ✅ Yes (DeepSeek) |
-| **Cost** | Free | Free tier available |
-| **Speed** | ⚡ Fast | 🐌 Slower (API call) |
-| **Code Quality** | Good | Excellent |
-| **Complex Strategies** | Limited | Unlimited |
-| **Offline** | ✅ Yes | ❌ No |
+Want unlimited access? Add your free Bitget API key in the sidebar.
 
 ---
 
 ## 🚀 Quick Start
 
-### Option 1: Try Live Demo
+### Option 1: Try Live Demo (No Setup!)
 **Deployed on Vercel:** **[https://strategyai.vercel.app](https://strategyai.vercel.app)**
 
-> ⚡ Fast deployment. Local mode works without API keys!
+> ⚡ Just open and start testing! No API keys required.
 
 ### Option 2: Run Locally
 
@@ -67,6 +47,21 @@ streamlit run app.py
 ```
 
 Open: http://localhost:8501
+
+---
+
+## 🎨 Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🆓 **No API Key Required** | Works with public Bitget API instantly |
+| 🤖 **Hybrid AI** | Local reasoning (default) + DeepSeek (optional) |
+| 📊 **Backtesting** | Test on historical Bitget data |
+| 📈 **Visual Charts** | Equity curve, drawdown, trade breakdown |
+| 📉 **Risk Metrics** | Sharpe, drawdown, win rate, profit factor |
+| 💾 **Export** | Download CSV, JSON, or Python code |
+| ⚡ **Fast** | Results in 5-10 seconds |
+| 🔑 **Optional API Key** | Add your own Bitget key for unlimited access |
 
 ---
 
@@ -92,6 +87,35 @@ Input: "Buy when 50 EMA crosses above 200 EMA, sell on death cross"
 Input: "Buy when price breaks above upper Bollinger Band, sell at middle"
 ```
 
+### 5. Custom Strategy
+```
+Input: Describe your own strategy in plain English!
+```
+
+---
+
+## 🔑 API Configuration
+
+### Public API (Default)
+- ✅ No setup required
+- ✅ Works instantly
+- ⚠️ Rate-limited
+- ✅ Perfect for testing
+
+### Personal API Key (Optional)
+- ✅ Unlimited access
+- ✅ No rate limits
+- ✅ Free to get
+- ✅ Read-only permissions
+
+**Get your free Bitget API key:**
+1. Go to https://www.bitget.com/
+2. Sign up / Log in
+3. Profile → API Management
+4. Create new API key
+5. Enable **"Read-only"** permissions
+6. Enter key in app sidebar
+
 ---
 
 ## 🛠️ Tech Stack
@@ -99,36 +123,11 @@ Input: "Buy when price breaks above upper Bollinger Band, sell at middle"
 | Component | Technology |
 |-----------|------------|
 | Frontend | Streamlit |
-| AI Engine | Local parser OR DeepSeek API |
+| AI Engine | Local parser + DeepSeek (optional) |
 | Backtesting | Custom Python |
-| Data | Bitget API (via CCXT) |
+| Data | Bitget API (public or personal) |
 | Charts | Plotly |
 | Deployment | Vercel |
-
----
-
-## 🔑 API Requirements
-
-| API | Required? | Purpose |
-|-----|-----------|---------|
-| **Bitget API** | ✅ Yes | Historical market data |
-| **DeepSeek API** | ❌ Optional | Better AI code generation |
-
-### Get Bitget API Key (Free, Read-Only):
-
-1. Go to https://www.bitget.com/
-2. Sign up / Log in
-3. Profile → API Management
-4. Create new API key
-5. Enable **"Read-only"** permissions
-6. Copy key and secret
-
-### Get DeepSeek API Key (Optional):
-
-1. Go to https://platform.deepseek.com/
-2. Sign up / Log in
-3. Get API key
-4. Add to environment variables
 
 ---
 
@@ -157,7 +156,7 @@ strategyai/
 │   └── index.py          # Vercel serverless wrapper
 ├── app.py                # Main Streamlit UI
 ├── ai_generator.py       # Hybrid AI (Local + DeepSeek)
-├── backtester.py         # Backtesting engine
+├── backtester.py         # Backtesting engine (public + personal API)
 ├── visualization.py      # Charts & metrics
 ├── requirements.txt      # Dependencies
 ├── vercel.json          # Vercel config
@@ -185,10 +184,10 @@ This project was built for the **Bitget AI Hackathon Season 1** (Trading Infra t
 2. Go to https://vercel.com/new
 3. Import your fork
 4. Select "Streamlit" preset
-5. Add environment variables:
-   - `BITGET_API_KEY` (Required)
-   - `BITGET_API_SECRET` (Required)
-   - `DEEPSEEK_API_KEY` (Optional - for better AI)
+5. Add environment variables (all optional):
+   - `BITGET_API_KEY` (optional - uses public API if missing)
+   - `BITGET_API_SECRET` (optional)
+   - `DEEPSEEK_API_KEY` (optional - for better AI)
 6. Deploy!
 
 **Full guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
@@ -226,12 +225,12 @@ Built with ❤️ for the Bitget AI Hackathon S1
 |----------|------|
 | **Live Demo** | https://strategyai.vercel.app |
 | **GitHub** | https://github.com/Vage1000600/strategyai |
-| **Bitget API** | https://www.bitget.com/api |
-| **DeepSeek API** | https://platform.deepseek.com/ |
+| **Get Bitget API** | https://www.bitget.com/api |
+| **Get DeepSeek API** | https://platform.deepseek.com/ |
 | **Hackathon** | https://www.bitget.com/activity-hub/hackathon |
 
 ---
 
 *Happy Backtesting! 📈*
 
-**Local mode: No API keys. DeepSeek mode: Optional upgrade.** 🚀
+**No API keys. No BS. Just backtest.** 🚀

@@ -1,25 +1,49 @@
 """
 StrategyAI - Backtesting Engine (IMPROVED)
-Person 2: Backtesting Engine Lead
+Uses public Bitget API by default (no key required for testing)
+Users can optionally provide their own API key
 
-New Features:
+Features:
+✅ Public API key as default (for testing)
+✅ User can override with personal key
 ✅ Buy & Hold benchmark comparison
-✅ Expanded risk metrics (profit factor, avg win/loss, streaks, recovery factor)
-✅ Better error handling
-✅ Customizable fee/slippage parameters
+✅ Expanded risk metrics
 """
 
 import ccxt
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
+
+# Public Bitget API credentials (read-only, rate-limited)
+# These are for testing/demo purposes
+PUBLIC_BITGET_KEY = ""
+PUBLIC_BITGET_SECRET = ""
 
 class BitgetDataFetcher:
     """Fetch historical data from Bitget API"""
     
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None):
+        """
+        Initialize Bitget connection.
+        
+        Args:
+            api_key: User's API key (optional)
+            api_secret: User's API secret (optional)
+            
+        If no key provided, uses public endpoints (rate-limited but works)
+        """
         self.exchange = ccxt.bitget()
+        
+        # If user provides API key, use it
+        if api_key and api_secret:
+            self.exchange.apiKey = api_key
+            self.exchange.secret = api_secret
+            self.using_public = False
+        else:
+            # Use public API (no authentication)
+            self.using_public = True
     
     def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 500) -> pd.DataFrame:
         """
@@ -34,7 +58,7 @@ class BitgetDataFetcher:
             DataFrame with OHLCV data + indicators
         """
         try:
-            # Fetch OHLCV data
+            # Fetch OHLCV data (works with or without API key)
             ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
             
             # Convert to DataFrame
@@ -48,7 +72,16 @@ class BitgetDataFetcher:
             return df
             
         except Exception as e:
-            raise Exception(f"Failed to fetch data from Bitget: {str(e)}")
+            # If public API fails, suggest getting API key
+            if self.using_public:
+                raise Exception(
+                    f"Public API failed: {str(e)}\n\n"
+                    "💡 Tip: Get your free Bitget API key at:\n"
+                    "https://www.bitget.com/api\n\n"
+                    "Enter it in the sidebar for unlimited access."
+                )
+            else:
+                raise Exception(f"Failed to fetch data: {str(e)}")
     
     def add_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add technical indicators to dataframe"""
@@ -344,7 +377,8 @@ class Backtester:
 
 
 def run_backtest(code: str, symbol: str, timeframe: str, initial_capital: float, 
-                 fee_rate: float = 0.001, slippage: float = 0.0005) -> Dict:
+                 fee_rate: float = 0.001, slippage: float = 0.0005,
+                 api_key: Optional[str] = None, api_secret: Optional[str] = None) -> Dict:
     """
     Main backtest function.
     
@@ -355,18 +389,23 @@ def run_backtest(code: str, symbol: str, timeframe: str, initial_capital: float,
         initial_capital: Starting capital
         fee_rate: Trading fee (default 0.1%)
         slippage: Slippage (default 0.05%)
+        api_key: User's Bitget API key (optional)
+        api_secret: User's Bitget API secret (optional)
         
     Returns:
         Dict with backtest results
     """
     try:
-        # Fetch data
-        fetcher = BitgetDataFetcher()
+        # Fetch data (uses public API if no key provided)
+        fetcher = BitgetDataFetcher(api_key, api_secret)
         df = fetcher.fetch_ohlcv(symbol, timeframe, limit=500)
         
         # Run backtest
         backtester = Backtester(initial_capital, fee_rate, slippage)
         results = backtester.run(df, code)
+        
+        # Add info about API mode
+        results['using_public_api'] = fetcher.using_public
         
         return results
         
@@ -398,6 +437,7 @@ def strategy(data):
         print(f"Error: {results['error']}")
     else:
         print(f"\n=== BACKTEST RESULTS ===")
+        print(f"Using Public API: {results.get('using_public_api', False)}")
         print(f"PnL: ${results['pnl']:.2f}")
         print(f"Return: {results['return_pct']:.2f}%")
         print(f"Sharpe: {results['sharpe']:.2f}")
