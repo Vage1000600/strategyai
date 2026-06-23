@@ -16,6 +16,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ai_generator import generate_strategy_code, validate_strategy
 from backtester import run_backtest
+from memory_system import store_backtest, get_insights
+from strategy_scorer import score_strategy
+from position_sizing import calculate_position_size, check_portfolio_heat
 
 # Create FastAPI app - MUST be at module level for Vercel
 app = FastAPI(title="StrategyAI")
@@ -160,6 +163,33 @@ async def run_backtest_endpoint(
         if 'error' in results:
             return JSONResponse({'success': False, 'error': f"Backtest Error: {results['error']}"})
         
+        # ENHANCEMENT 1: Store in memory for learning
+        try:
+            store_backtest(strategy_input, results, code)
+        except Exception as e:
+            # Don't fail if memory storage fails
+            pass
+        
+        # ENHANCEMENT 2: Score the strategy
+        try:
+            strategy_score = score_strategy(results)
+        except Exception as e:
+            strategy_score = {'error': str(e)}
+        
+        # ENHANCEMENT 3: Calculate position sizing recommendation
+        try:
+            current_price = results.get('current_price', 0)
+            # Use max drawdown as stop loss reference
+            stop_price = current_price * (1 - results.get('max_drawdown', 0.1) / 100)
+            position_rec = calculate_position_size(
+                portfolio_value=initial_capital,
+                entry_price=current_price,
+                stop_loss_price=stop_price,
+                method='fixed_risk'
+            )
+        except Exception as e:
+            position_rec = {'error': str(e)}
+        
         # Format results - convert timestamps and non-serializable objects
         benchmark = results.get('benchmark_return', 0)
         outperf = results['return_pct'] - benchmark
@@ -193,7 +223,11 @@ async def run_backtest_endpoint(
             },
             'trades': trades,
             'using_public_api': results.get('using_public_api', False),
-            'validated': True
+            'validated': True,
+            # ENHANCEMENTS
+            'strategy_score': strategy_score,
+            'position_sizing': position_rec,
+            'learning_insights': get_insights()
         })
         
         return JSONResponse(content=results_clean)
@@ -211,6 +245,33 @@ async def run_backtest_endpoint(
 async def health():
     """Health check"""
     return {'status': 'ok'}
+
+
+@app.get("/insights")
+async def get_learning_insights():
+    """Get learning insights from memory"""
+    try:
+        insights = get_insights()
+        return {'success': True, 'insights': insights}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+@app.get("/performance")
+async def get_performance():
+    """Get overall performance metrics"""
+    try:
+        from memory_system import get_memory
+        memory = get_memory()
+        perf = memory.get_performance_summary()
+        patterns = memory.get_pattern_insights()
+        return {
+            'success': True,
+            'performance': perf,
+            'patterns': patterns
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 
 def get_html_page():
