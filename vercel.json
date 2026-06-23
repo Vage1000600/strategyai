@@ -17,7 +17,6 @@
     }
   ],
   "env": {
-    "DEEPSEEK_API_KEY": "@deepseek-api-key",
     "BITGET_API_KEY": "@bitget-api-key",
     "BITGET_API_SECRET": "@bitget-api-secret"
   },

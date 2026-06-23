@@ -9,22 +9,26 @@
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 ![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
+![No API Keys](https://img.shields.io/badge/No%20API%20Keys%20Needed-green)
 
 ---
 
 ## 🎯 What Is This?
 
-StrategyAI lets you **backtest trading strategies without writing code**. Just describe your strategy in natural language, and our AI converts it to executable code, runs it on historical Bitget data, and shows you the results.
+StrategyAI lets you **backtest trading strategies without writing code**. Just describe your strategy in natural language, and our **local AI** converts it to executable code, runs it on historical Bitget data, and shows you the results.
 
 ### Example:
 ```
 You type: "Buy when RSI < 30, sell when RSI > 70"
 
-AI generates:
-if rsi < 30:
-    buy()
-elif rsi > 70:
-    sell()
+Local AI generates:
+def strategy(data):
+    if data['rsi'] < 30:
+        return 'buy'
+    elif data['rsi'] > 70:
+        return 'sell'
+    else:
+        return 'hold'
 
 Results:
 - PnL: +$347 (34.7%)
@@ -35,70 +39,85 @@ Results:
 
 ---
 
-## 🏆 Bitget AI Hackathon S1
+## 🔥 Key Features
 
-This project was built for the **Bitget AI Hackathon Season 1** (Trading Infra track).
-
-**Team:** [Your Team Name]
-**Timeline:** 7 days (June 24-30, 2026)
+| Feature | Description |
+|---------|-------------|
+| 🤖 **Local AI** | No external API calls - runs 100% locally |
+| 📊 **Backtesting** | Test on historical Bitget data |
+| 📈 **Visual Charts** | Equity curve, drawdown, trade breakdown |
+| 📉 **Risk Metrics** | Sharpe, drawdown, win rate, profit factor |
+| 💾 **Export** | Download CSV, JSON, or Python code |
+| ⚡ **Fast** | Results in 5-10 seconds |
 
 ---
 
 ## 🚀 Quick Start
 
-### Option 1: Try the Live Demo (Recommended)
+### Option 1: Try Live Demo (No Setup!)
 **Deployed on Vercel:** **[https://strategyai.vercel.app](https://strategyai.vercel.app)**
 
-> ⚡ Fast, reliable deployment on Vercel's edge network
+> ⚡ Fast, reliable deployment. No API keys needed!
 
-### Option 2: Deploy Your Own on Vercel
-
-```bash
-# 1. Fork this repo
-github.com/Vage1000600/strategyai → Fork
-
-# 2. Go to vercel.com/new
-# 3. Import your fork
-# 4. Select "Streamlit" preset
-# 5. Add environment variables:
-#    - DEEPSEEK_API_KEY
-#    - BITGET_API_KEY
-#    - BITGET_API_SECRET
-# 6. Click Deploy!
-
-# Full guide: DEPLOYMENT.md
-```
-
-### Option 3: Run Locally
+### Option 2: Run Locally
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/strategyai.git
+git clone https://github.com/Vage1000600/strategyai.git
 cd strategyai
 
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
-
-# 4. Run the app
+# 3. Run the app
 streamlit run app.py
 ```
 
+Open: http://localhost:8501
+
 ---
 
-## 📦 Features
+## 🎨 No API Keys Required!
 
-| Feature | Description |
-|---------|-------------|
-| 🤖 **AI Strategy Generator** | Converts natural language to Python code |
-| 📊 **Backtesting Engine** | Runs strategies on historical Bitget data |
-| 📈 **Performance Metrics** | PnL, Sharpe, drawdown, win rate, and more |
-| 🎨 **Interactive Charts** | Equity curve, drawdown, trade breakdown |
-| 💾 **Export Code** | Download your strategy as Python file |
-| 📚 **Example Strategies** | Pre-built strategies to learn from |
+Unlike other AI tools, StrategyAI uses **local reasoning** to generate strategy code:
+
+- ❌ No DeepSeek API key
+- ❌ No OpenAI API key
+- ❌ No external calls
+- ✅ 100% local processing
+- ✅ Free forever
+- ✅ No rate limits
+
+**Only requirement:** Bitget API for historical data (free, read-only)
+
+---
+
+## 📖 Example Strategies
+
+### 1. RSI Strategy
+```
+Input: "Buy when RSI < 30, sell when RSI > 70"
+```
+
+### 2. MACD Crossover
+```
+Input: "Buy when MACD crosses above signal, sell when it crosses below"
+```
+
+### 3. Golden Cross
+```
+Input: "Buy when 50 EMA crosses above 200 EMA, sell on death cross"
+```
+
+### 4. Bollinger Breakout
+```
+Input: "Buy when price breaks above upper Bollinger Band, sell at middle"
+```
+
+### 5. Custom Strategy
+```
+Input: Describe your own strategy in plain English!
+```
 
 ---
 
@@ -107,107 +126,11 @@ streamlit run app.py
 | Component | Technology |
 |-----------|------------|
 | Frontend | Streamlit |
-| AI Model | DeepSeek API |
+| AI Engine | Local rule-based parser |
 | Backtesting | Custom Python |
-| Data | Bitget API |
+| Data | Bitget API (via CCXT) |
 | Charts | Plotly |
-| Deployment | Streamlit Cloud |
-
----
-
-## 📖 How It Works
-
-```
-┌─────────────────┐
-│  User Input     │
-│  (English)      │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  AI Code Gen    │
-│  (DeepSeek)     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Backtester     │
-│  (Bitget Data)  │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Results        │
-│  (Charts + UI)  │
-└─────────────────┘
-```
-
----
-
-## 📝 Example Strategies
-
-### 1. RSI Strategy
-```
-Buy when RSI < 30
-Sell when RSI > 70
-```
-
-### 2. MACD Crossover
-```
-Buy when MACD crosses above signal line
-Sell when MACD crosses below signal line
-```
-
-### 3. Moving Average Crossover
-```
-Buy when 50 EMA crosses above 200 EMA
-Sell when 50 EMA crosses below 200 EMA
-```
-
-### 4. Breakout Strategy
-```
-Buy when price breaks above 20-day high
-Sell at 10% profit or 5% stop loss
-```
-
-### 5. Mean Reversion
-```
-Buy when price is 2 standard deviations below 20-day MA
-Sell when price returns to mean
-```
-
----
-
-## 🏗️ Project Structure
-
-```
-strategyai/
-├── app.py                  # Streamlit UI
-├── ai_generator.py         # AI code generation
-├── backtester.py           # Backtesting engine
-├── visualization.py        # Charts & metrics
-├── bitget_api.py           # Bitget data connector
-├── requirements.txt        # Dependencies
-├── README.md              # This file
-├── examples/              # Example strategies
-└── tests/                 # Unit tests
-```
-
----
-
-## 🔑 API Keys Required
-
-| API | Purpose | Get Key |
-|-----|---------|---------|
-| **DeepSeek** | AI code generation | https://platform.deepseek.com/ |
-| **Bitget** | Historical market data | https://www.bitget.com/api |
-
-Add your keys to `.env`:
-```
-DEEPSEEK_API_KEY=sk-your-key-here
-BITGET_API_KEY=your-bitget-key
-BITGET_API_SECRET=your-bitget-secret
-```
+| Deployment | Vercel |
 
 ---
 
@@ -217,32 +140,76 @@ The backtester calculates:
 
 | Metric | Description |
 |--------|-------------|
-| **Total PnL** | Net profit/loss in USD |
-| **Return %** | Percentage return on initial capital |
+| **Total PnL** | Net profit/loss in USDT |
+| **Return %** | Percentage return |
 | **Sharpe Ratio** | Risk-adjusted return |
 | **Max Drawdown** | Largest peak-to-trough decline |
 | **Win Rate** | Percentage of winning trades |
-| **Avg Win/Loss** | Average win vs average loss ratio |
-| **Total Trades** | Number of trades executed |
 | **Profit Factor** | Gross profit / Gross loss |
+| **Avg Win/Loss** | Average win vs loss ratio |
+| **Beat HODL** | Performance vs buy & hold |
 
 ---
 
-## 🎥 Demo Video
+## 🏗️ Project Structure
 
-[Watch the 2-minute demo](https://youtu.be/YOUR_VIDEO_ID)
-
----
-
-## 🏃 Running Tests
-
-```bash
-# Run all tests
-pytest tests/
-
-# Run specific test
-pytest tests/test_backtester.py
 ```
+strategyai/
+├── api/
+│   └── index.py          # Vercel serverless wrapper
+├── app.py                # Main Streamlit UI
+├── ai_generator.py       # Local AI code generator
+├── backtester.py         # Backtesting engine
+├── visualization.py      # Charts & metrics
+├── requirements.txt      # Dependencies
+├── vercel.json          # Vercel config
+├── README.md            # This file
+└── DEPLOYMENT.md        # Deployment guide
+```
+
+---
+
+## 🎯 Bitget AI Hackathon S1
+
+This project was built for the **Bitget AI Hackathon Season 1** (Trading Infra track).
+
+**Team:** StrategyAI Team
+**Timeline:** 7 days (June 24-30, 2026)
+**Status:** ✅ Production Ready
+
+---
+
+## 📝 API Requirements
+
+| API | Required? | Purpose |
+|-----|-----------|---------|
+| **Bitget API** | ✅ Yes | Historical market data |
+| **DeepSeek API** | ❌ No | Uses local AI instead |
+| **OpenAI API** | ❌ No | Uses local AI instead |
+
+### Get Bitget API Key (Free, Read-Only):
+
+1. Go to https://www.bitget.com/
+2. Sign up / Log in
+3. Profile → API Management
+4. Create new API key
+5. Enable **"Read-only"** permissions
+6. Copy key and secret
+
+---
+
+## 🚀 Deploy Your Own
+
+### Deploy to Vercel (5 minutes):
+
+1. Fork this repo
+2. Go to https://vercel.com/new
+3. Import your fork
+4. Select "Streamlit" preset
+5. Add Bitget API keys (optional - has demo mode)
+6. Deploy!
+
+**Full guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ---
 
@@ -265,29 +232,23 @@ MIT License - feel free to use this for your own projects!
 
 ## 👥 Team
 
-| Name | Role | GitHub |
-|------|------|--------|
-| [Your Name] | AI Integration | @yourhandle |
-| [Teammate 2] | Backtesting Engine | @handle2 |
-| [Teammate 3] | Visualization | @handle3 |
-| [Teammate 4] | UI/UX + Deployment | @handle4 |
+Built with ❤️ for the Bitget AI Hackathon S1
+
+**Inspired by:** AgentFlow Infra local reasoning architecture
 
 ---
 
-## 📞 Contact
+## 🔗 Quick Links
 
-- **Twitter:** [@YourHandle](https://x.com/YourHandle)
-- **Email:** your-email@example.com
-- **Discord:** YourDiscord#1234
-
----
-
-## 🙏 Acknowledgments
-
-- Built for **Bitget AI Hackathon Season 1**
-- Powered by **DeepSeek AI** and **Bitget API**
-- Inspired by traders who can't code (yet!)
+| Resource | Link |
+|----------|------|
+| **Live Demo** | https://strategyai.vercel.app |
+| **GitHub** | https://github.com/Vage1000600/strategyai |
+| **Bitget API** | https://www.bitget.com/api |
+| **Hackathon** | https://www.bitget.com/activity-hub/hackathon |
 
 ---
 
 *Happy Backtesting! 📈*
+
+**No API keys. No BS. Just backtest.** 🚀
