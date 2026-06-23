@@ -460,8 +460,15 @@ class BitgetDataFetcher:
     def fetch(self, symbol: str, timeframe: str, limit: int = 1000) -> pd.DataFrame:
         """Fetch OHLCV data and calculate indicators"""
         try:
+            print(f"[FETCH] Fetching {symbol} {timeframe} data...")
             # Fetch candles
             bars = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+            print(f"[FETCH] Got {len(bars)} bars")
+            
+            if len(bars) == 0:
+                print("[FETCH] ERROR: No data returned from exchange")
+                return {'error': 'No data returned from exchange'}
+            
             df = pd.DataFrame(bars, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
@@ -487,9 +494,13 @@ class BitgetDataFetcher:
             # ATR
             df['atr'] = self._calculate_atr(df, 14)
             
+            print(f"[FETCH] Success: {len(df)} rows, columns: {list(df.columns)}")
             return df
             
         except Exception as e:
+            import traceback
+            print(f"[FETCH] ERROR: {str(e)}")
+            print(f"[FETCH] Traceback: {traceback.format_exc()}")
             return {'error': f'Failed to fetch data: {str(e)}'}
     
     def _calculate_rsi(self, series: pd.Series, period: int) -> pd.Series:
