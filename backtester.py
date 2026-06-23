@@ -298,6 +298,8 @@ class Backtester:
     
     def _create_safe_builtins(self) -> Dict:
         """Create sandboxed builtins for strategy execution"""
+        import builtins as builtin_module
+        
         safe_builtins = {
             'len': len, 'range': range, 'abs': abs,
             'min': min, 'max': max, 'sum': sum,
@@ -309,11 +311,14 @@ class Backtester:
         dangerous_modules = ['os', 'sys', 'subprocess', 'socket', 'requests',
                            'urllib', 'http', 'ftplib', 'smtplib', 'pickle']
         
+        # Get the real __import__ from builtin_module (works whether __builtins__ is dict or module)
+        real_import = builtin_module.__import__
+        
         def restricted_import(name, *args, **kwargs):
             if any(name.startswith(d) for d in dangerous_modules):
                 raise ImportError(f"Import of '{name}' is not allowed for security")
             # Allow safe imports using the real __import__
-            return __builtins__.__import__(name, *args, **kwargs)
+            return real_import(name, *args, **kwargs)
         
         safe_builtins['__import__'] = restricted_import
         
