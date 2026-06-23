@@ -195,11 +195,13 @@ async def run_backtest_endpoint(
         if 'error' in results:
             return JSONResponse({'success': False, 'error': f"Backtest Error: {results['error']}"})
         
+        # Extract metrics from new backtester structure
+        metrics = results.get('metrics', results)  # Support both old and new structure
+        
         # ENHANCEMENT 1: Store in memory for learning
         try:
             store_backtest(strategy_input, results, code)
         except Exception as e:
-            # Don't fail if memory storage fails
             pass
         
         # ENHANCEMENT 2: Score the strategy
@@ -211,8 +213,7 @@ async def run_backtest_endpoint(
         # ENHANCEMENT 3: Calculate position sizing recommendation
         try:
             current_price = results.get('current_price', 0)
-            # Use max drawdown as stop loss reference
-            stop_price = current_price * (1 - results.get('max_drawdown', 0.1) / 100)
+            stop_price = current_price * (1 - metrics.get('max_drawdown', 0.1) / 100)
             position_rec = calculate_position_size(
                 portfolio_value=initial_capital,
                 entry_price=current_price,
@@ -222,11 +223,12 @@ async def run_backtest_endpoint(
         except Exception as e:
             position_rec = {'error': str(e)}
         
-        # Format results - convert timestamps and non-serializable objects
-        benchmark = results.get('benchmark_return', 0)
-        outperf = results['return_pct'] - benchmark
+        # Format results - handle both old and new structure
+        benchmark = metrics.get('benchmark_return', 0)
+        return_pct = metrics.get('return_pct', 0)
+        outperf = return_pct - benchmark
         
-        # Convert trades DataFrame to list and handle timestamps
+        # Convert trades to list
         trades = results.get('trades', [])
         if hasattr(trades, 'to_dict'):
             trades = trades.to_dict('records')
@@ -238,25 +240,24 @@ async def run_backtest_endpoint(
             'strategy_type': generated.get('strategy_type', 'Custom') if not generated_code else 'Custom',
             'indicators': generated.get('indicators', []) if not generated_code else [],
             'metrics': {
-                'pnl': float(results['pnl']),
-                'return_pct': float(results['return_pct']),
-                'sharpe': float(results.get('sharpe', 0)),
-                'max_drawdown': float(results.get('max_drawdown', 0)),
-                'win_rate': float(results.get('win_rate', 0)),
-                'total_trades': int(results.get('total_trades', 0)),
+                'pnl': float(metrics.get('total_pnl', metrics.get('pnl', 0))),
+                'return_pct': float(return_pct),
+                'sharpe': float(metrics.get('sharpe_ratio', metrics.get('sharpe', 0))),
+                'max_drawdown': float(metrics.get('max_drawdown', 0)),
+                'win_rate': float(metrics.get('win_rate', 0)),
+                'total_trades': int(metrics.get('total_trades', 0)),
                 'benchmark_return': float(benchmark),
                 'outperformance': float(outperf),
-                'profit_factor': float(results.get('profit_factor', 0)),
-                'avg_win_loss': float(results.get('avg_win_loss', 0)),
+                'profit_factor': float(metrics.get('profit_factor', 0)),
+                'avg_win_loss': float(metrics.get('avg_win_loss', 0)),
             },
             'charts': {
-                'equity': [float(x) for x in results['equity_curve']],
-                'drawdown': [float(x) for x in results.get('drawdown', [])],
+                'equity': [float(x) for x in results.get('equity_curve', [])],
+                'drawdown': [float(x) for x in results.get('drawdown_curve', results.get('drawdown', []))],
             },
             'trades': trades,
             'using_public_api': results.get('using_public_api', False),
             'validated': True,
-            # ENHANCEMENTS
             'strategy_score': strategy_score,
             'position_sizing': position_rec,
             'learning_insights': get_insights()
@@ -920,9 +921,9 @@ def get_html_page():
                 const response = await fetch('/backtest', { method: 'POST', body: formData });
                 const data = await response.json();
                 
-                if (data.success) {
-                    const pnl = data.metrics.pnl;
-                    const returnPct = data.metrics.return_pct;
+                if (data.success && data.metrics) {
+                    const pnl = data.metrics.pnl || 0;
+                    const returnPct = data.metrics.return_pct || 0;
                     
                     document.getElementById('metric_pnl').textContent = '$' + pnl.toFixed(2);
                     document.getElementById('metric_pnl').className = 'text-2xl font-bold ' + (pnl >= 0 ? 'text-emerald-400' : 'text-red-400');
@@ -930,12 +931,12 @@ def get_html_page():
                     document.getElementById('metric_return').textContent = returnPct.toFixed(2) + '%';
                     document.getElementById('metric_return').className = 'text-2xl font-bold ' + (returnPct >= 0 ? 'text-emerald-400' : 'text-red-400');
                     
-                    document.getElementById('metric_sharpe').textContent = data.metrics.sharpe.toFixed(2);
-                    document.getElementById('metric_drawdown').textContent = data.metrics.max_drawdown.toFixed(2) + '%';
-                    document.getElementById('metric_winrate').textContent = data.metrics.win_rate.toFixed(1) + '%';
-                    document.getElementById('metric_benchmark').textContent = data.metrics.benchmark_return.toFixed(2) + '%';
+                    document.getElementById('metric_sharpe').textContent = (data.metrics.sharpe || 0).toFixed(2);
+                    document.getElementById('metric_drawdown').textContent = (data.metrics.max_drawdown || 0).toFixed(2) + '%';
+                    document.getElementById('metric_winrate').textContent = (data.metrics.win_rate || 0).toFixed(1) + '%';
+                    document.getElementById('metric_benchmark').textContent = ((data.metrics.benchmark_return || 0).toFixed(2)) + '%';
                     
-                    const outperf = data.metrics.outperformance;
+                    const outperf = data.metrics.outperformance || 0;
                     const outperfEl = document.getElementById('metric_outperformance');
                     outperfEl.textContent = (outperf >= 0 ? '+' : '') + outperf.toFixed(2) + '%';
                     outperfEl.className = 'text-2xl font-bold ' + (outperf >= 0 ? 'text-emerald-400' : 'text-red-400');
