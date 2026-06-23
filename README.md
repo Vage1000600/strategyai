@@ -9,55 +9,48 @@
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 ![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
-![No API Keys](https://img.shields.io/badge/No%20API%20Keys%20Needed-green)
 
 ---
 
 ## 🎯 What Is This?
 
-StrategyAI lets you **backtest trading strategies without writing code**. Just describe your strategy in natural language, and our **local AI** converts it to executable code, runs it on historical Bitget data, and shows you the results.
+StrategyAI lets you **backtest trading strategies without writing code**. Just describe your strategy in natural language, and our AI converts it to executable code, runs it on historical Bitget data, and shows you the results.
 
-### Example:
-```
-You type: "Buy when RSI < 30, sell when RSI > 70"
+### Two Modes:
 
-Local AI generates:
-def strategy(data):
-    if data['rsi'] < 30:
-        return 'buy'
-    elif data['rsi'] > 70:
-        return 'sell'
-    else:
-        return 'hold'
+**🆓 Local Mode (Default):**
+- No API keys needed
+- 100% free
+- Fast processing
+- Good for standard strategies
 
-Results:
-- PnL: +$347 (34.7%)
-- Sharpe: 1.8
-- Max Drawdown: -12%
-- Win Rate: 64%
-```
+**🤖 DeepSeek Mode (Optional):**
+- Requires DeepSeek API key
+- Better code quality
+- Handles complex strategies
+- Still free tier available
 
 ---
 
 ## 🔥 Key Features
 
-| Feature | Description |
-|---------|-------------|
-| 🤖 **Local AI** | No external API calls - runs 100% locally |
-| 📊 **Backtesting** | Test on historical Bitget data |
-| 📈 **Visual Charts** | Equity curve, drawdown, trade breakdown |
-| 📉 **Risk Metrics** | Sharpe, drawdown, win rate, profit factor |
-| 💾 **Export** | Download CSV, JSON, or Python code |
-| ⚡ **Fast** | Results in 5-10 seconds |
+| Feature | Local Mode | DeepSeek Mode |
+|---------|------------|---------------|
+| **API Key Required** | ❌ No | ✅ Yes (DeepSeek) |
+| **Cost** | Free | Free tier available |
+| **Speed** | ⚡ Fast | 🐌 Slower (API call) |
+| **Code Quality** | Good | Excellent |
+| **Complex Strategies** | Limited | Unlimited |
+| **Offline** | ✅ Yes | ❌ No |
 
 ---
 
 ## 🚀 Quick Start
 
-### Option 1: Try Live Demo (No Setup!)
+### Option 1: Try Live Demo
 **Deployed on Vercel:** **[https://strategyai.vercel.app](https://strategyai.vercel.app)**
 
-> ⚡ Fast, reliable deployment. No API keys needed!
+> ⚡ Fast deployment. Local mode works without API keys!
 
 ### Option 2: Run Locally
 
@@ -74,21 +67,6 @@ streamlit run app.py
 ```
 
 Open: http://localhost:8501
-
----
-
-## 🎨 No API Keys Required!
-
-Unlike other AI tools, StrategyAI uses **local reasoning** to generate strategy code:
-
-- ❌ No DeepSeek API key
-- ❌ No OpenAI API key
-- ❌ No external calls
-- ✅ 100% local processing
-- ✅ Free forever
-- ✅ No rate limits
-
-**Only requirement:** Bitget API for historical data (free, read-only)
 
 ---
 
@@ -114,11 +92,6 @@ Input: "Buy when 50 EMA crosses above 200 EMA, sell on death cross"
 Input: "Buy when price breaks above upper Bollinger Band, sell at middle"
 ```
 
-### 5. Custom Strategy
-```
-Input: Describe your own strategy in plain English!
-```
-
 ---
 
 ## 🛠️ Tech Stack
@@ -126,11 +99,36 @@ Input: Describe your own strategy in plain English!
 | Component | Technology |
 |-----------|------------|
 | Frontend | Streamlit |
-| AI Engine | Local rule-based parser |
+| AI Engine | Local parser OR DeepSeek API |
 | Backtesting | Custom Python |
 | Data | Bitget API (via CCXT) |
 | Charts | Plotly |
 | Deployment | Vercel |
+
+---
+
+## 🔑 API Requirements
+
+| API | Required? | Purpose |
+|-----|-----------|---------|
+| **Bitget API** | ✅ Yes | Historical market data |
+| **DeepSeek API** | ❌ Optional | Better AI code generation |
+
+### Get Bitget API Key (Free, Read-Only):
+
+1. Go to https://www.bitget.com/
+2. Sign up / Log in
+3. Profile → API Management
+4. Create new API key
+5. Enable **"Read-only"** permissions
+6. Copy key and secret
+
+### Get DeepSeek API Key (Optional):
+
+1. Go to https://platform.deepseek.com/
+2. Sign up / Log in
+3. Get API key
+4. Add to environment variables
 
 ---
 
@@ -158,7 +156,7 @@ strategyai/
 ├── api/
 │   └── index.py          # Vercel serverless wrapper
 ├── app.py                # Main Streamlit UI
-├── ai_generator.py       # Local AI code generator
+├── ai_generator.py       # Hybrid AI (Local + DeepSeek)
 ├── backtester.py         # Backtesting engine
 ├── visualization.py      # Charts & metrics
 ├── requirements.txt      # Dependencies
@@ -179,25 +177,6 @@ This project was built for the **Bitget AI Hackathon Season 1** (Trading Infra t
 
 ---
 
-## 📝 API Requirements
-
-| API | Required? | Purpose |
-|-----|-----------|---------|
-| **Bitget API** | ✅ Yes | Historical market data |
-| **DeepSeek API** | ❌ No | Uses local AI instead |
-| **OpenAI API** | ❌ No | Uses local AI instead |
-
-### Get Bitget API Key (Free, Read-Only):
-
-1. Go to https://www.bitget.com/
-2. Sign up / Log in
-3. Profile → API Management
-4. Create new API key
-5. Enable **"Read-only"** permissions
-6. Copy key and secret
-
----
-
 ## 🚀 Deploy Your Own
 
 ### Deploy to Vercel (5 minutes):
@@ -206,7 +185,10 @@ This project was built for the **Bitget AI Hackathon Season 1** (Trading Infra t
 2. Go to https://vercel.com/new
 3. Import your fork
 4. Select "Streamlit" preset
-5. Add Bitget API keys (optional - has demo mode)
+5. Add environment variables:
+   - `BITGET_API_KEY` (Required)
+   - `BITGET_API_SECRET` (Required)
+   - `DEEPSEEK_API_KEY` (Optional - for better AI)
 6. Deploy!
 
 **Full guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
@@ -245,10 +227,11 @@ Built with ❤️ for the Bitget AI Hackathon S1
 | **Live Demo** | https://strategyai.vercel.app |
 | **GitHub** | https://github.com/Vage1000600/strategyai |
 | **Bitget API** | https://www.bitget.com/api |
+| **DeepSeek API** | https://platform.deepseek.com/ |
 | **Hackathon** | https://www.bitget.com/activity-hub/hackathon |
 
 ---
 
 *Happy Backtesting! 📈*
 
-**No API keys. No BS. Just backtest.** 🚀
+**Local mode: No API keys. DeepSeek mode: Optional upgrade.** 🚀
