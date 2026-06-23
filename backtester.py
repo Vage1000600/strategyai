@@ -1,524 +1,493 @@
 """
-StrategyAI - Backtesting Engine (IMPROVED)
-Uses public Bitget API by default (no key required for testing)
-Users can optionally provide their own API key
-
-Features:
-✅ Public API key as default (for testing)
-✅ User can override with personal key
-✅ Buy & Hold benchmark comparison
-✅ Expanded risk metrics
-✅ Code validation before execution
+StrategyAI - Enhanced Backtester
+Supports: Long/Short, Partial Exits, Trailing Stops, Position Sizing
 """
 
-import ccxt
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-
-# Public Bitget API credentials (read-only, rate-limited)
-# These are for testing/demo purposes
-PUBLIC_BITGET_KEY = ""
-PUBLIC_BITGET_SECRET = ""
-
-class BitgetDataFetcher:
-    """Fetch historical data from Bitget API"""
-    
-    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None):
-        """
-        Initialize Bitget connection.
-        
-        Args:
-            api_key: User's API key (optional)
-            api_secret: User's API secret (optional)
-            
-        If no key provided, uses public endpoints (rate-limited but works)
-        """
-        self.exchange = ccxt.bitget()
-        
-        # If user provides API key, use it
-        if api_key and api_secret:
-            self.exchange.apiKey = api_key
-            self.exchange.secret = api_secret
-            self.using_public = False
-        else:
-            # Use public API (no authentication)
-            self.using_public = True
-    
-    def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 500) -> pd.DataFrame:
-        """
-        Fetch OHLCV data from Bitget.
-        
-        Args:
-            symbol: Trading pair (e.g., 'BTC/USDT')
-            timeframe: Candle timeframe (e.g., '1h', '4h', '1d')
-            limit: Number of candles to fetch
-            
-        Returns:
-            DataFrame with OHLCV data + indicators
-        """
-        try:
-            # Fetch OHLCV data (works with or without API key)
-            ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-            
-            # Convert to DataFrame
-            df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-            df.set_index('timestamp', inplace=True)
-            
-            # Add indicators
-            df = self.add_indicators(df)
-            
-            return df
-            
-        except Exception as e:
-            # If public API fails, suggest getting API key
-            if self.using_public:
-                raise Exception(
-                    f"Public API failed: {str(e)}\n\n"
-                    "💡 Tip: Get your free Bitget API key at:\n"
-                    "https://www.bitget.com/api\n\n"
-                    "Enter it in the sidebar for unlimited access."
-                )
-            else:
-                raise Exception(f"Failed to fetch data: {str(e)}")
-    
-    def add_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add technical indicators to dataframe"""
-        
-        # RSI (14-period)
-        delta = df['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        df['rsi'] = 100 - (100 / (1 + rs))
-        
-        # MACD (12, 26, 9)
-        ema12 = df['close'].ewm(span=12, adjust=False).mean()
-        ema26 = df['close'].ewm(span=26, adjust=False).mean()
-        df['macd'] = ema12 - ema26
-        df['signal'] = df['macd'].ewm(span=9, adjust=False).mean()
-        df['prev_macd'] = df['macd'].shift(1)
-        df['prev_signal'] = df['signal'].shift(1)
-        
-        # EMAs
-        df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
-        df['ema200'] = df['close'].ewm(span=200, adjust=False).mean()
-        df['prev_ema50'] = df['ema50'].shift(1)
-        df['prev_ema200'] = df['ema200'].shift(1)
-        
-        # SMAs
-        df['sma20'] = df['close'].rolling(window=20).mean()
-        df['sma50'] = df['close'].rolling(window=50).mean()
-        df['prev_sma20'] = df['sma20'].shift(1)
-        df['prev_sma50'] = df['sma50'].shift(1)
-        
-        # Bollinger Bands (20, 2)
-        df['bb_middle'] = df['close'].rolling(window=20).mean()
-        df['bb_std'] = df['close'].rolling(window=20).std()
-        df['bb_upper'] = df['bb_middle'] + (df['bb_std'] * 2)
-        df['bb_lower'] = df['bb_middle'] - (df['bb_std'] * 2)
-        df['prev_bb_upper'] = df['bb_upper'].shift(1)
-        df['prev_bb_lower'] = df['bb_lower'].shift(1)
-        
-        # ATR (14-period)
-        high_low = df['high'] - df['low']
-        high_close = np.abs(df['high'] - df['close'].shift())
-        low_close = np.abs(df['low'] - df['close'].shift())
-        ranges = pd.concat([high_low, high_close, low_close], axis=1)
-        true_range = np.max(ranges, axis=1)
-        df['atr'] = true_range.rolling(14).mean()
-        
-        # Price position relative to Bollinger Bands
-        df['bb_position'] = (df['close'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'])
-        
-        # Fill NaN values
-        df.fillna(method='bfill', inplace=True)
-        df.fillna(0, inplace=True)  # For any remaining NaN
-        
-        return df
+from typing import Dict, Optional, Tuple
+from datetime import datetime
+import ccxt
 
 
 class Backtester:
-    """Run backtest on historical data"""
+    """
+    Enhanced backtester with advanced features:
+    - Long and short positions
+    - Partial position sizing (0-100%)
+    - Trailing stops
+    - Multiple exit conditions
+    - Advanced risk metrics
+    """
     
-    def __init__(self, initial_capital: float = 1000.0, fee_rate: float = 0.001, slippage: float = 0.0005):
-        """
-        Initialize backtester.
-        
-        Args:
-            initial_capital: Starting capital in USDT
-            fee_rate: Trading fee (default 0.1%)
-            slippage: Slippage percentage (default 0.05%)
-        """
+    def __init__(self, initial_capital: float = 10000, fee_rate: float = 0.001, slippage: float = 0.0005):
         self.initial_capital = initial_capital
         self.fee_rate = fee_rate
         self.slippage = slippage
     
-    def run(self, df: pd.DataFrame, strategy_code: str) -> Dict:
+    def run(self, df: pd.DataFrame, strategy_code: str, use_trailing_stop: bool = False, 
+            trailing_stop_pct: float = 0.02, position_size_pct: float = 1.0) -> Dict:
         """
-        Run backtest with given strategy.
+        Run backtest with enhanced features.
         
         Args:
             df: DataFrame with OHLCV + indicators
             strategy_code: Python code string from AI generator
+            use_trailing_stop: Enable trailing stop
+            trailing_stop_pct: Trailing stop percentage (e.g., 0.02 = 2%)
+            position_size_pct: Position size as percentage of capital (0.0-1.0)
             
         Returns:
-            Dict with backtest results including expanded metrics
+            Dict with backtest results
         """
         try:
-            # SECURITY: Create sandboxed namespace for strategy execution
-            # Only allow safe builtins and numpy
-            safe_builtins = {
-                'len': len,
-                'range': range,
-                'abs': abs,
-                'min': min,
-                'max': max,
-                'sum': sum,
-                'pow': pow,
-                'round': round,
-                'zip': zip,
-                'enumerate': enumerate,
-                '__import__': __import__,  # Restricted below
-                'Exception': Exception,
-            }
-            
-            # Block dangerous imports
-            class RestrictedImporter:
-                def find_module(self, fullname, path=None):
-                    dangerous = ['os', 'sys', 'subprocess', 'socket', 'requests', 
-                                'urllib', 'http', 'ftplib', 'smtplib', 'pickle',
-                                'marshal', 'ctypes', 'importlib']
-                    if any(fullname.startswith(d) for d in dangerous):
-                        return self
-                    return None
-                
-                def load_module(self, fullname):
-                    raise ImportError(f"Import of '{fullname}' is not allowed for security")
-            
-            safe_builtins['__import__'] = RestrictedImporter()
-            
-            # Add numpy (safe)
-            import numpy as np
-            safe_builtins['np'] = np
-            safe_builtins['numpy'] = np
-            
-            # Create local namespace with restricted builtins
+            # SECURITY: Create sandboxed namespace
+            safe_builtins = self._create_safe_builtins()
             local_ns = {'__builtins__': safe_builtins}
             exec(strategy_code, local_ns, local_ns)
             strategy_func = local_ns.get('strategy')
             
             if not strategy_func:
-                return {"error": "Strategy function not found in code. Make sure your code has 'def strategy(data):'"}
+                return {"error": "Strategy function not found. Add 'def strategy(data):'"}
             
-            # Initialize tracking variables
+            # Initialize state
             capital = self.initial_capital
-            position = 0  # 0 = no position, 1 = long
-            position_size = 0
+            position = 0  # -1 = short, 0 = none, 1 = long
+            position_qty = 0  # Number of units
             entry_price = 0
             entry_time = None
+            peak_price = 0  # For trailing stop
+            unrealized_pnl = 0
             
+            # Track all trades
             trades = []
             equity_curve = [self.initial_capital]
-            win_streak = 0
-            loss_streak = 0
-            longest_win_streak = 0
-            longest_loss_streak = 0
-            total_wins = 0
-            total_losses = 0
+            drawdown_curve = [0]
+            
+            # Performance tracking
+            total_trades = 0
+            winning_trades = 0
+            losing_trades = 0
             total_profit = 0
             total_loss = 0
+            max_drawdown = 0
+            peak_equity = self.initial_capital
             
             # Run through each candle
             for i in range(1, len(df)):
                 row = df.iloc[i]
+                current_price = row['close']
                 
-                # Prepare data dict for strategy - pass ARRAYS (full history up to current candle)
-                # This allows strategies to compute indicators on the fly
-                data = {
-                    'close': df['close'].iloc[:i+1].values,  # Array of all closes up to now
-                    'open': df['open'].iloc[:i+1].values,
-                    'high': df['high'].iloc[:i+1].values,
-                    'low': df['low'].iloc[:i+1].values,
-                    'volume': df['volume'].iloc[:i+1].values,
-                    'rsi': df['rsi'].iloc[:i+1].values,
-                    'macd': df['macd'].iloc[:i+1].values,
-                    'signal': df['signal'].iloc[:i+1].values,
-                    'ema50': df['ema50'].iloc[:i+1].values,
-                    'ema200': df['ema200'].iloc[:i+1].values,
-                    'sma20': df['sma20'].iloc[:i+1].values,
-                    'sma50': df['sma50'].iloc[:i+1].values,
-                    'bb_upper': df['bb_upper'].iloc[:i+1].values,
-                    'bb_middle': df['bb_middle'].iloc[:i+1].values,
-                    'bb_lower': df['bb_lower'].iloc[:i+1].values,
-                    'atr': df['atr'].iloc[:i+1].values,
-                    # Also provide current values for convenience
-                    'current_close': row['close'],
-                    'current_open': row['open'],
-                    'current_high': row['high'],
-                    'current_low': row['low'],
-                }
+                # Prepare data for strategy (arrays up to current point)
+                data = self._prepare_data(df, i)
                 
-                # Get strategy signal
+                # Get signals from strategy
                 try:
-                    signal = strategy_func(data)
-                except Exception as e:
-                    return {"error": f"Strategy execution failed at candle {i}: {str(e)}"}
-                
-                # Execute trades
-                # Note: strategy should return 'buy'/'sell' strings, or (buy_signals, sell_signals) tuples
-                # Handle both return types
-                if isinstance(signal, tuple):
-                    # Returns (buy_signals, sell_signals) arrays
-                    buy_signal = signal[0][-1] if len(signal[0]) > 0 else False
-                    sell_signal = signal[1][-1] if len(signal[1]) > 0 else False
-                elif isinstance(signal, str):
-                    # Returns 'buy'/'sell'/'hold'
-                    buy_signal = (signal == 'buy')
-                    sell_signal = (signal == 'sell')
-                elif isinstance(signal, bool):
-                    # Returns single bool (True = buy, False = hold)
-                    buy_signal = signal
-                    sell_signal = False
-                else:
-                    buy_signal = False
-                    sell_signal = False
-                
-                if buy_signal and position == 0:
-                    # Enter long position
-                    entry_price = row['close'] * (1 + self.slippage)
-                    position_size = capital / entry_price
-                    capital = 0
-                    position = 1
-                    entry_time = row.name
-                    
-                elif sell_signal and position > 0:
-                    # Exit long position
-                    exit_price = row['close'] * (1 - self.slippage)
-                    exit_value = position_size * exit_price
-                    exit_value = exit_value * (1 - self.fee_rate)  # Apply fee
-                    
-                    pnl = exit_value - (position_size * entry_price)
-                    pnl_pct = (pnl / (position_size * entry_price)) * 100
-                    
-                    # Track win/loss
-                    if pnl > 0:
-                        total_wins += 1
-                        total_profit += pnl
-                        win_streak += 1
-                        loss_streak = 0
-                        longest_win_streak = max(longest_win_streak, win_streak)
+                    result = strategy_func(data)
+                    if isinstance(result, tuple) and len(result) == 2:
+                        buy_signal, sell_signal = result
                     else:
-                        total_losses += 1
-                        total_loss += abs(pnl)
-                        loss_streak += 1
-                        win_streak = 0
-                        longest_loss_streak = max(longest_loss_streak, loss_streak)
+                        # Handle single boolean return
+                        buy_signal = result
+                        sell_signal = False
                     
-                    trades.append({
-                        'entry_time': entry_time,
-                        'exit_time': row.name,
-                        'entry_price': entry_price,
-                        'exit_price': exit_price,
-                        'pnl': pnl,
-                        'pnl_pct': pnl_pct,
-                        'type': 'LONG'
-                    })
-                    
-                    capital = exit_value
-                    position = 0
-                    position_size = 0
+                    # Handle array vs single value
+                    if hasattr(buy_signal, '__len__') and len(buy_signal) > 0:
+                        buy_signal = buy_signal[-1]  # Get last value
+                    if hasattr(sell_signal, '__len__') and len(sell_signal) > 0:
+                        sell_signal = sell_signal[-1]
+                except Exception as e:
+                    continue  # Skip this candle if strategy fails
                 
-                # Calculate equity
-                if position > 0:
-                    equity = position_size * row['close']
+                # Check for existing position exit
+                if position != 0:
+                    # Check trailing stop
+                    if use_trailing_stop and position == 1:
+                        peak_price = max(peak_price, current_price)
+                        trail_stop = peak_price * (1 - trailing_stop_pct)
+                        if current_price < trail_stop:
+                            # Exit long
+                            pnl = (current_price - entry_price) * position_qty
+                            capital += current_price * position_qty - abs(pnl) * self.fee_rate
+                            trades.append({
+                                'entry_time': entry_time,
+                                'exit_time': row.name,
+                                'entry_price': entry_price,
+                                'exit_price': current_price,
+                                'side': 'LONG',
+                                'quantity': position_qty,
+                                'pnl': pnl,
+                                'exit_reason': 'trailing_stop'
+                            })
+                            total_trades += 1
+                            if pnl > 0:
+                                winning_trades += 1
+                                total_profit += pnl
+                            else:
+                                losing_trades += 1
+                                total_loss += abs(pnl)
+                            position = 0
+                            position_qty = 0
+                    
+                    # Check regular exit
+                    if sell_signal and position == 1:
+                        # Exit long
+                        pnl = (current_price - entry_price) * position_qty
+                        capital += current_price * position_qty - abs(pnl) * self.fee_rate
+                        trades.append({
+                            'entry_time': entry_time,
+                            'exit_time': row.name,
+                            'entry_price': entry_price,
+                            'exit_price': current_price,
+                            'side': 'LONG',
+                            'quantity': position_qty,
+                            'pnl': pnl,
+                            'exit_reason': 'signal'
+                        })
+                        total_trades += 1
+                        if pnl > 0:
+                            winning_trades += 1
+                            total_profit += pnl
+                        else:
+                            losing_trades += 1
+                            total_loss += abs(pnl)
+                        position = 0
+                        position_qty = 0
+                    
+                    elif sell_signal and position == -1:
+                        # Exit short
+                        pnl = (entry_price - current_price) * position_qty
+                        capital += current_price * position_qty - abs(pnl) * self.fee_rate
+                        trades.append({
+                            'entry_time': entry_time,
+                            'exit_time': row.name,
+                            'entry_price': entry_price,
+                            'exit_price': current_price,
+                            'side': 'SHORT',
+                            'quantity': position_qty,
+                            'pnl': pnl,
+                            'exit_reason': 'signal'
+                        })
+                        total_trades += 1
+                        if pnl > 0:
+                            winning_trades += 1
+                            total_profit += pnl
+                        else:
+                            losing_trades += 1
+                            total_loss += abs(pnl)
+                        position = 0
+                        position_qty = 0
+                
+                # Check for new entry (only if no position)
+                if position == 0 and buy_signal:
+                    # Calculate position size
+                    position_value = capital * position_size_pct
+                    position_qty = position_value / current_price
+                    
+                    # Enter long (default)
+                    position = 1
+                    entry_price = current_price
+                    entry_time = row.name
+                    peak_price = current_price
+                    capital -= position_value  # Reserve capital
+                    
+                # Also support short selling
+                if position == 0 and 'short_signal' in data:
+                    short_signal = data['short_signal']
+                    if hasattr(short_signal, '__len__') and len(short_signal) > 0:
+                        short_signal = short_signal[-1]
+                    if short_signal:
+                        position = -1
+                        position_qty = (capital * position_size_pct) / current_price
+                        entry_price = current_price
+                        entry_time = row.name
+                        peak_price = current_price
+                
+                # Calculate unrealized PnL
+                if position == 1:
+                    unrealized_pnl = (current_price - entry_price) * position_qty
+                elif position == -1:
+                    unrealized_pnl = (entry_price - current_price) * position_qty
                 else:
-                    equity = capital
+                    unrealized_pnl = 0
                 
-                equity_curve.append(equity)
+                # Update equity curve
+                current_equity = capital + unrealized_pnl
+                equity_curve.append(current_equity)
+                
+                # Update drawdown
+                peak_equity = max(peak_equity, current_equity)
+                drawdown = (peak_equity - current_equity) / peak_equity if peak_equity > 0 else 0
+                drawdown_curve.append(drawdown)
+                max_drawdown = max(max_drawdown, drawdown)
             
-            # Close any open position at the end
-            if position > 0:
-                exit_price = df.iloc[-1]['close'] * (1 - self.slippage)
-                exit_value = position_size * exit_price * (1 - self.fee_rate)
-                pnl = exit_value - (position_size * entry_price)
-                pnl_pct = (pnl / (position_size * entry_price)) * 100
-                
-                if pnl > 0:
-                    total_wins += 1
-                    total_profit += pnl
+            # Close any remaining position at end
+            if position != 0:
+                final_price = df.iloc[-1]['close']
+                if position == 1:
+                    pnl = (final_price - entry_price) * position_qty
                 else:
-                    total_losses += 1
-                    total_loss += abs(pnl)
-                
+                    pnl = (entry_price - final_price) * position_qty
+                capital += final_price * position_qty - abs(pnl) * self.fee_rate
                 trades.append({
                     'entry_time': entry_time,
                     'exit_time': df.iloc[-1].name,
                     'entry_price': entry_price,
-                    'exit_price': exit_price,
+                    'exit_price': final_price,
+                    'side': 'LONG' if position == 1 else 'SHORT',
+                    'quantity': position_qty,
                     'pnl': pnl,
-                    'pnl_pct': pnl_pct,
-                    'type': 'LONG (closed at end)'
+                    'exit_reason': 'end_of_data'
                 })
-                
-                capital = exit_value
-                position = 0
+                total_trades += 1
+                if pnl > 0:
+                    winning_trades += 1
+                    total_profit += pnl
+                else:
+                    losing_trades += 1
+                    total_loss += abs(pnl)
             
-            # Calculate final equity
-            final_equity = capital if capital > 0 else (position_size * df.iloc[-1]['close'] if position > 0 else self.initial_capital)
-            total_pnl = final_equity - self.initial_capital
+            # Calculate metrics
+            final_capital = capital
+            total_pnl = final_capital - self.initial_capital
             return_pct = (total_pnl / self.initial_capital) * 100
             
-            # Calculate benchmark (Buy & Hold)
-            benchmark_start_price = df['close'].iloc[0]
-            benchmark_end_price = df['close'].iloc[-1]
-            benchmark_return = ((benchmark_end_price - benchmark_start_price) / benchmark_start_price) * 100
-            
-            # Calculate Sharpe ratio (annualized)
-            equity_series = pd.Series(equity_curve)
-            returns = equity_series.pct_change().dropna()
-            sharpe = (returns.mean() / returns.std()) * np.sqrt(252) if len(returns) > 1 and returns.std() > 0 else 0
-            
-            # Calculate max drawdown
-            equity_df = pd.DataFrame(equity_curve, columns=['equity'])
-            equity_df['peak'] = equity_df['equity'].cummax()
-            equity_df['drawdown'] = (equity_df['equity'] - equity_df['peak']) / equity_df['peak'] * 100
-            max_drawdown = abs(equity_df['drawdown'].min())
+            # Sharpe ratio (simplified)
+            equity_array = np.array(equity_curve)
+            returns = np.diff(equity_array) / equity_array[:-1]
+            sharpe = np.sqrt(252) * np.mean(returns) / np.std(returns) if len(returns) > 1 and np.std(returns) > 0 else 0
             
             # Win rate
-            total_trades = len(trades)
-            win_rate = (total_wins / total_trades * 100) if total_trades > 0 else 0
+            win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
             
             # Profit factor
-            profit_factor = (total_profit / total_loss) if total_loss > 0 else float('inf') if total_profit > 0 else 0
+            profit_factor = total_profit / total_loss if total_loss > 0 else float('inf')
             
-            # Average win/loss ratio
-            avg_win = (total_profit / total_wins) if total_wins > 0 else 0
-            avg_loss = (total_loss / total_losses) if total_losses > 0 else 0
-            avg_win_loss_ratio = (avg_win / avg_loss) if avg_loss > 0 else float('inf') if avg_win > 0 else 0
-            
-            # Recovery factor
-            recovery_factor = (total_pnl / max_drawdown) if max_drawdown > 0 else 0
-            
-            # Convert trades to DataFrame
-            trades_df = pd.DataFrame(trades) if trades else pd.DataFrame()
+            # Max consecutive wins/losses
+            max_consecutive_wins = self._max_consecutive(trades, True)
+            max_consecutive_losses = self._max_consecutive(trades, False)
             
             return {
-                "pnl": total_pnl,
-                "return_pct": return_pct,
-                "sharpe": sharpe,
-                "max_drawdown": max_drawdown,
-                "win_rate": win_rate,
-                "total_trades": total_trades,
-                "equity_curve": equity_curve,
-                "drawdown": equity_df['drawdown'].tolist(),
-                "trades": trades_df,
-                "final_equity": final_equity,
-                "benchmark_return": benchmark_return,
-                "profit_factor": profit_factor,
-                "avg_win_loss": avg_win_loss_ratio,
-                "longest_win_streak": longest_win_streak,
-                "longest_loss_streak": longest_loss_streak,
-                "recovery_factor": recovery_factor,
-                "total_profit": total_profit,
-                "total_loss": total_loss,
-                "total_wins": total_wins,
-                "total_losses": total_losses
+                'success': True,
+                'metrics': {
+                    'final_capital': round(final_capital, 2),
+                    'total_pnl': round(total_pnl, 2),
+                    'return_pct': round(return_pct, 2),
+                    'total_trades': total_trades,
+                    'winning_trades': winning_trades,
+                    'losing_trades': losing_trades,
+                    'win_rate': round(win_rate, 2),
+                    'profit_factor': round(profit_factor, 2),
+                    'sharpe_ratio': round(sharpe, 2),
+                    'max_drawdown': round(max_drawdown * 100, 2),
+                    'max_consecutive_wins': max_consecutive_wins,
+                    'max_consecutive_losses': max_consecutive_losses,
+                },
+                'trades': trades[:50],  # Limit to first 50 for display
+                'equity_curve': equity_curve,
+                'drawdown_curve': drawdown_curve,
+                'initial_capital': self.initial_capital
             }
             
         except Exception as e:
-            return {"error": f"Backtest failed: {str(e)}"}
+            import traceback
+            return {
+                'error': f'Backtest failed: {str(e)}',
+                'traceback': traceback.format_exc()
+            }
+    
+    def _create_safe_builtins(self) -> Dict:
+        """Create sandboxed builtins for strategy execution"""
+        safe_builtins = {
+            'len': len, 'range': range, 'abs': abs,
+            'min': min, 'max': max, 'sum': sum,
+            'pow': pow, 'round': round, 'zip': zip,
+            'enumerate': enumerate, 'Exception': Exception,
+        }
+        
+        # Block dangerous imports
+        class RestrictedImporter:
+            def find_module(self, fullname, path=None):
+                dangerous = ['os', 'sys', 'subprocess', 'socket', 'requests',
+                           'urllib', 'http', 'ftplib', 'smtplib', 'pickle']
+                if any(fullname.startswith(d) for d in dangerous):
+                    return self
+                return None
+            
+            def load_module(self, fullname):
+                raise ImportError(f"'{fullname}' is not allowed")
+        
+        safe_builtins['__import__'] = RestrictedImporter()
+        
+        import numpy as np
+        safe_builtins['np'] = np
+        safe_builtins['numpy'] = np
+        
+        return safe_builtins
+    
+    def _prepare_data(self, df: pd.DataFrame, idx: int) -> Dict:
+        """Prepare data arrays for strategy"""
+        return {
+            'close': df['close'].iloc[:idx+1].values,
+            'open': df['open'].iloc[:idx+1].values,
+            'high': df['high'].iloc[:idx+1].values,
+            'low': df['low'].iloc[:idx+1].values,
+            'volume': df['volume'].iloc[:idx+1].values,
+            'rsi': df['rsi'].iloc[:idx+1].values if 'rsi' in df.columns else np.zeros(idx+1),
+            'macd': df['macd'].iloc[:idx+1].values if 'macd' in df.columns else np.zeros(idx+1),
+            'signal': df['signal'].iloc[:idx+1].values if 'signal' in df.columns else np.zeros(idx+1),
+            'ema50': df['ema50'].iloc[:idx+1].values if 'ema50' in df.columns else np.zeros(idx+1),
+            'ema200': df['ema200'].iloc[:idx+1].values if 'ema200' in df.columns else np.zeros(idx+1),
+            'bb_upper': df['bb_upper'].iloc[:idx+1].values if 'bb_upper' in df.columns else np.zeros(idx+1),
+            'bb_lower': df['bb_lower'].iloc[:idx+1].values if 'bb_lower' in df.columns else np.zeros(idx+1),
+            'atr': df['atr'].iloc[:idx+1].values if 'atr' in df.columns else np.zeros(idx+1),
+        }
+    
+    def _max_consecutive(self, trades: list, wins: bool) -> int:
+        """Calculate max consecutive wins or losses"""
+        if not trades:
+            return 0
+        
+        max_consecutive = 0
+        current_consecutive = 0
+        
+        for trade in trades:
+            is_win = trade['pnl'] > 0
+            if is_win == wins:
+                current_consecutive += 1
+                max_consecutive = max(max_consecutive, current_consecutive)
+            else:
+                current_consecutive = 0
+        
+        return max_consecutive
 
 
-def run_backtest(code: str, symbol: str, timeframe: str, initial_capital: float, 
+def run_backtest(code: str, symbol: str, timeframe: str, initial_capital: float,
                  fee_rate: float = 0.001, slippage: float = 0.0005,
                  api_key: Optional[str] = None, api_secret: Optional[str] = None,
-                 validate: bool = True) -> Dict:
+                 validate: bool = True, position_size: float = 1.0,
+                 trailing_stop: str = "false") -> Dict:
     """
-    Main backtest function.
+    Main backtest function with all parameters.
     
     Args:
-        code: Strategy code from AI generator
-        symbol: Trading pair
-        timeframe: Candle timeframe
+        code: Strategy code
+        symbol: Trading pair (e.g., BTC/USDT)
+        timeframe: Candle timeframe (e.g., 1h, 4h, 1d)
         initial_capital: Starting capital
-        fee_rate: Trading fee (default 0.1%)
-        slippage: Slippage (default 0.05%)
-        api_key: User's Bitget API key (optional)
-        api_secret: User's Bitget API secret (optional)
-        validate: Run validation checks before execution (default True)
-        
+        fee_rate: Trading fee
+        slippage: Slippage rate
+        api_key: Bitget API key (optional)
+        api_secret: Bitget API secret (optional)
+        validate: Run validation checks
+        position_size: Position size as fraction (0.0-1.0)
+        trailing_stop: "false" or percentage (e.g., "0.02")
+    
     Returns:
-        Dict with backtest results including validation info
+        Dict with backtest results
     """
     try:
-        # Step 1: Validate code structure and syntax
+        # Step 1: Validate code
         if validate:
             from ai_generator import validate_strategy
-            
             validation = validate_strategy(code)
             if not validation['valid']:
                 return {
                     'error': 'Code validation failed',
-                    'validation_errors': validation['errors'],
-                    'validation_warnings': validation['warnings']
+                    'validation_errors': validation['errors']
                 }
         
-        # Step 2: Fetch data (uses public API if no key provided)
+        # Step 2: Fetch data
+        from backtester import BitgetDataFetcher
         fetcher = BitgetDataFetcher(api_key, api_secret)
-        df = fetcher.fetch_ohlcv(symbol, timeframe, limit=500)
+        df = fetcher.fetch(symbol, timeframe)
         
-        # Step 3: Test execution on small sample (optional safety check)
-        # SKIPPED: Function removed in compact version
+        if 'error' in df:
+            return df
         
-        # Step 4: Run full backtest
-        backtester = Backtester(initial_capital, fee_rate, slippage)
-        results = backtester.run(df, code)
+        # Step 3: Run backtest
+        backtester = Backtester(initial_capital=initial_capital, fee_rate=fee_rate, slippage=slippage)
         
-        # Add info about API mode and validation
-        results['using_public_api'] = fetcher.using_public
-        results['validated'] = validate
+        use_trailing = trailing_stop.lower() != "false"
+        trail_pct = float(trailing_stop) if use_trailing else 0.02
         
-        return results
+        return backtester.run(
+            df=df,
+            strategy_code=code,
+            use_trailing_stop=use_trailing,
+            trailing_stop_pct=trail_pct,
+            position_size_pct=position_size
+        )
         
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        return {
+            'error': f'Backtest failed: {str(e)}',
+            'traceback': traceback.format_exc()
+        }
 
 
-# Test function
-if __name__ == "__main__":
-    # Test with simple RSI strategy
-    test_code = """
-def strategy(data):
-    if data['rsi'] < 30:
-        return 'buy'
-    elif data['rsi'] > 70:
-        return 'sell'
-    else:
-        return 'hold'
-"""
+class BitgetDataFetcher:
+    """Fetch OHLCV data from Bitget"""
     
-    results = run_backtest(
-        code=test_code,
-        symbol="BTC/USDT",
-        timeframe="1h",
-        initial_capital=1000
-    )
+    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None):
+        self.api_key = api_key
+        self.api_secret = api_secret
+        import ccxt
+        self.exchange = ccxt.bitget({
+            'apiKey': api_key,
+            'secret': api_secret,
+            'enableRateLimit': True,
+        })
     
-    if "error" in results:
-        print(f"Error: {results['error']}")
-    else:
-        print(f"\n=== BACKTEST RESULTS ===")
-        print(f"Using Public API: {results.get('using_public_api', False)}")
-        print(f"PnL: ${results['pnl']:.2f}")
-        print(f"Return: {results['return_pct']:.2f}%")
-        print(f"Sharpe: {results['sharpe']:.2f}")
-        print(f"Max Drawdown: {results['max_drawdown']:.2f}%")
-        print(f"Win Rate: {results['win_rate']:.1f}%")
-        print(f"Total Trades: {results['total_trades']}")
-        print(f"Profit Factor: {results['profit_factor']:.2f}")
-        print(f"Avg Win/Loss: {results['avg_win_loss']:.2f}")
-        print(f"Benchmark (HODL): {results['benchmark_return']:.2f}%")
-        print(f"Beat HODL by: {results['return_pct'] - results['benchmark_return']:.2f}%")
+    def fetch(self, symbol: str, timeframe: str, limit: int = 1000) -> pd.DataFrame:
+        """Fetch OHLCV data and calculate indicators"""
+        try:
+            # Fetch candles
+            bars = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+            df = pd.DataFrame(bars, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df.set_index('timestamp', inplace=True)
+            
+            # Calculate indicators
+            df['rsi'] = self._calculate_rsi(df['close'], 14)
+            ema12 = df['close'].ewm(span=12, adjust=False).mean()
+            ema26 = df['close'].ewm(span=26, adjust=False).mean()
+            df['macd'] = ema12 - ema26
+            df['signal'] = df['macd'].ewm(span=9, adjust=False).mean()
+            df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
+            df['ema200'] = df['close'].ewm(span=200, adjust=False).mean()
+            df['sma20'] = df['close'].rolling(window=20).mean()
+            df['sma50'] = df['close'].rolling(window=50).mean()
+            
+            # Bollinger Bands
+            sma20 = df['close'].rolling(window=20).mean()
+            std20 = df['close'].rolling(window=20).std()
+            df['bb_upper'] = sma20 + 2 * std20
+            df['bb_lower'] = sma20 - 2 * std20
+            df['bb_middle'] = sma20
+            
+            # ATR
+            df['atr'] = self._calculate_atr(df, 14)
+            
+            return df
+            
+        except Exception as e:
+            return {'error': f'Failed to fetch data: {str(e)}'}
+    
+    def _calculate_rsi(self, series: pd.Series, period: int) -> pd.Series:
+        """Calculate RSI"""
+        delta = series.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        rs = gain / (loss + 1e-10)
+        return 100 - (100 / (1 + rs))
+    
+    def _calculate_atr(self, df: pd.DataFrame, period: int) -> pd.Series:
+        """Calculate ATR"""
+        high_low = df['high'] - df['low']
+        high_close = np.abs(df['high'] - df['close'].shift())
+        low_close = np.abs(df['low'] - df['close'].shift())
+        ranges = pd.concat([high_low, high_close, low_close], axis=1)
+        true_range = np.max(ranges, axis=1)
+        return true_range.rolling(period).mean()

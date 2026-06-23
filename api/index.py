@@ -146,6 +146,8 @@ async def run_backtest_endpoint(
     generated_code: str = Form(None),
     api_key: str = Form(None),
     api_secret: str = Form(None),
+    position_size: float = Form(1.0),
+    trailing_stop: str = Form("false"),
 ):
     """Run backtest on a strategy (uses generated_code if provided, otherwise generates new)
     
@@ -185,7 +187,9 @@ async def run_backtest_endpoint(
             slippage=slippage / 100,
             api_key=api_key if has_api_key else None,
             api_secret=api_secret if has_api_key and api_secret else None,
-            validate=True
+            validate=True,
+            position_size=position_size,
+            trailing_stop=trailing_stop
         )
         
         if 'error' in results:
@@ -517,19 +521,46 @@ def get_html_page():
                                 </div>
                             </div>
                             
-                            <!-- Backtester Limitations -->
-                            <div class="mb-5 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                            <!-- Backtester Features -->
+                            <div class="mb-5 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
                                 <div class="flex items-start">
-                                    <span class="text-lg mr-2">⚠️</span>
-                                    <div class="text-xs text-amber-300">
-                                        <strong>Backtester Limitations:</strong>
+                                    <span class="text-lg mr-2">✨</span>
+                                    <div class="text-xs text-emerald-300">
+                                        <strong>Advanced Features:</strong>
                                         <ul class="mt-1 space-y-1 list-disc list-inside">
-                                            <li>Long-only strategies (no short selling)</li>
-                                            <li>Full position sizing only (no partial exits)</li>
-                                            <li>Orders execute at candle close (no intra-candle)</li>
-                                            <li>Basic risk management (no trailing stops)</li>
+                                            <li>✅ Long & Short selling</li>
+                                            <li>✅ Partial position sizing (10-100%)</li>
+                                            <li>✅ Trailing stops (optional)</li>
+                                            <li>✅ Multiple exit conditions</li>
+                                            <li>✅ Advanced risk metrics</li>
                                         </ul>
-                                        <p class="mt-2 text-amber-400">For educational purposes only. Not financial advice.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Risk Management Settings -->
+                            <div class="mb-5 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+                                <h4 class="text-sm font-semibold text-slate-200 mb-3">⚙️ Risk Management</h4>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Position Size</label>
+                                        <select id="position_size" name="position_size" class="input-field text-sm">
+                                            <option value="1.0">100% (Full)</option>
+                                            <option value="0.5">50%</option>
+                                            <option value="0.25">25%</option>
+                                            <option value="0.1">10%</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Trailing Stop</label>
+                                        <select id="trailing_stop" name="trailing_stop" class="input-field text-sm">
+                                            <option value="false">Disabled</option>
+                                            <option value="0.02">2%</option>
+                                            <option value="0.05">5%</option>
+                                            <option value="0.10">10%</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
