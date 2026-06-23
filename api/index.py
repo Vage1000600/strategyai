@@ -508,12 +508,11 @@ def get_html_page():
                             <div class="mb-5 pt-4 border-t border-white/10">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">🤖 AI Provider</label>
                                 <select id="ai_provider" name="ai_provider" class="input-field">
-                                    <option value="local">Local (Free, Fast)</option>
-                                    <option value="ollama">Ollama (Local LLM)</option>
-                                    <option value="deepseek">DeepSeek (Advanced)</option>
-                                    <option value="claude">Claude (Best Quality)</option>
+                                    <option value="local">Local Templates (Free, Instant)</option>
+                                    <option value="deepseek">DeepSeek (Advanced, ~$0.01)</option>
+                                    <option value="claude">Claude (Best Quality, ~$0.03)</option>
                                 </select>
-                                <p class="text-xs text-slate-500 mt-2">Local uses templates. Ollama/DeepSeek/Claude for complex strategies.</p>
+                                <p class="text-xs text-slate-500 mt-2">Local uses proven templates. DeepSeek/Claude for complex custom strategies.</p>
                             </div>
                             
                             <!-- DeepSeek API Key -->

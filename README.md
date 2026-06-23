@@ -32,7 +32,7 @@ Want unlimited access? Add your free Bitget API key in the settings.
 
 > ⚡ Just open and start testing! No API keys required.
 
-### Option 2: Run Locally
+### Option 2: Run Locally (Standard)
 
 ```bash
 # 1. Clone the repo
@@ -47,6 +47,40 @@ uvicorn main:app --reload
 ```
 
 Open: http://localhost:8000
+
+### Option 3: Run Locally with Ollama (Advanced)
+
+Want to use **local LLMs** like Ollama for AI strategy generation? Run the app locally:
+
+```bash
+# 1. Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh  # Linux/Mac
+# Or download from https://ollama.ai for Windows
+
+# 2. Pull a model
+ollama pull phi3:mini        # Fast (3.8B)
+ollama pull llama3.2         # Lightweight (3B)
+ollama pull codellama        # Code-specialized
+
+# 3. Start Ollama server
+ollama serve
+
+# 4. Clone and run StrategyAI
+git clone https://github.com/Vage1000600/strategyai.git
+cd strategyai
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+Open: http://localhost:8000 and select **"Ollama"** from the AI Provider dropdown.
+
+> **Note:** Ollama only works when running locally (not on Vercel) because it needs access to `localhost:11434`.
+
+**Why use Ollama?**
+- ✅ 100% offline (no API costs)
+- ✅ Privacy (your strategies stay local)
+- ✅ Customizable (use any Ollama model)
+- ❌ Requires local setup
 
 ---
 
@@ -80,7 +114,7 @@ Open: http://localhost:8000
 | Feature | Description |
 |---------|-------------|
 | 🆓 **No API Key Required** | Works with public Bitget API instantly |
-| 🤖 **Hybrid AI** | Local reasoning (default) + DeepSeek (optional) |
+| 🤖 **Multi-Provider AI** | Local templates (free), DeepSeek, Claude, or Ollama (local) |
 | 📊 **Backtesting** | Test on historical Bitget data |
 | 📈 **Visual Charts** | Interactive equity curve & drawdown charts |
 | 🔒 **Code Validation** | Syntax, security, and execution testing |
