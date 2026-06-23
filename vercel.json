@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "requirements.txt",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "env": {
+    "DEEPSEEK_API_KEY": "@deepseek-api-key",
+    "BITGET_API_KEY": "@bitget-api-key",
+    "BITGET_API_SECRET": "@bitget-api-secret"
+  },
+  "outputDirectory": ".vercel/output"
+}

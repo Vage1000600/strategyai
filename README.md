@@ -8,6 +8,7 @@
 ![Track](https://img.shields.io/badge/Track-Trading%20Infra-green)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
+![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
 
 ---
 
@@ -46,9 +47,29 @@ This project was built for the **Bitget AI Hackathon Season 1** (Trading Infra t
 ## 🚀 Quick Start
 
 ### Option 1: Try the Live Demo (Recommended)
-Visit: **[https://strategyai.streamlit.app](https://strategyai.streamlit.app)**
+**Deployed on Vercel:** **[https://strategyai.vercel.app](https://strategyai.vercel.app)**
 
-### Option 2: Run Locally
+> ⚡ Fast, reliable deployment on Vercel's edge network
+
+### Option 2: Deploy Your Own on Vercel
+
+```bash
+# 1. Fork this repo
+github.com/Vage1000600/strategyai → Fork
+
+# 2. Go to vercel.com/new
+# 3. Import your fork
+# 4. Select "Streamlit" preset
+# 5. Add environment variables:
+#    - DEEPSEEK_API_KEY
+#    - BITGET_API_KEY
+#    - BITGET_API_SECRET
+# 6. Click Deploy!
+
+# Full guide: DEPLOYMENT.md
+```
+
+### Option 3: Run Locally
 
 ```bash
 # 1. Clone the repo
