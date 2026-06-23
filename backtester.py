@@ -169,8 +169,9 @@ class Backtester:
         """
         try:
             # Create local namespace for strategy execution
-            local_ns = {}
-            exec(strategy_code, {}, local_ns)
+            # IMPORTANT: Use local_ns as BOTH globals and locals so helper functions are accessible
+            local_ns = {'__builtins__': __builtins__}  # Include builtins for safety
+            exec(strategy_code, local_ns, local_ns)
             strategy_func = local_ns.get('strategy')
             
             if not strategy_func:
