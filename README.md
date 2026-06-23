@@ -7,7 +7,7 @@
 ![Bitget AI Hackathon](https://img.shields.io/badge/Bitget%20AI%20Hackathon-S1-blue)
 ![Track](https://img.shields.io/badge/Track-Trading%20Infra-green)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+![License](https://img.shields.io/badge/License-AGPL--3.0-blue)
 ![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
 ![No Setup](https://img.shields.io/badge/No%20Setup%20Required-green)
 
@@ -50,6 +50,22 @@ Open: http://localhost:8000
 
 ---
 
+## 📜 Licensing
+
+**StrategyAI is open source under AGPL-3.0** — free forever for:
+- ✅ Personal use
+- ✅ Research & education
+- ✅ Non-profit organizations
+- ✅ Open-source projects
+
+**Need closed-source usage?** [Commercial licenses available](LICENSE-COMMERCIAL.md) for:
+- 🏢 Proprietary trading firms
+- 🏦 Hedge funds & asset managers
+- 💻 SaaS platforms
+- 🏷️ White-label solutions
+
+---
+
 ## 🎨 Key Features
 
 | Feature | Description |
@@ -58,6 +74,8 @@ Open: http://localhost:8000
 | 🤖 **Hybrid AI** | Local reasoning (default) + DeepSeek (optional) |
 | 📊 **Backtesting** | Test on historical Bitget data |
 | 📈 **Visual Charts** | Interactive equity curve & drawdown charts |
+| 🔒 **Code Validation** | Syntax, security, and execution testing |
+| 👁️ **Transparent** | Review generated code before running |
 | 📉 **Risk Metrics** | Sharpe, drawdown, win rate, profit factor |
 | 💾 **Export** | Download CSV, JSON, or Python code |
 | ⚡ **Fast** | Results in 5-10 seconds |
