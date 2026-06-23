@@ -33,7 +33,7 @@ def strategy(data):
 def compute_ema(data, period):
     ema = np.zeros_like(data)
     ema[0] = data[0]
-    multiplier = 2 / (period + 1)
+    multiplier = 2.0 / (period + 1)
     for i in range(1, len(data)):
         ema[i] = (data[i] - ema[i-1]) * multiplier + ema[i-1]
     return ema
@@ -42,13 +42,21 @@ def strategy(data):
     close = data['close']
     ema12 = compute_ema(close, 12)
     ema26 = compute_ema(close, 26)
-    macd = ema12 - ema26
-    signal = compute_ema(macd, 9)
-    buy = np.zeros(len(close), dtype=bool)
-    sell = np.zeros(len(close), dtype=bool)
-    buy[1:] = (macd[1:] > signal[1:]) & (macd[:-1] <= signal[:-1])
-    sell[1:] = (macd[1:] < signal[1:]) & (macd[:-1] >= signal[:-1])
-    return buy, sell''',
+    macd_line = ema12 - ema26
+    signal_line = compute_ema(macd_line, 9)
+    
+    # Generate signals
+    buy_signals = np.zeros(len(close), dtype=bool)
+    sell_signals = np.zeros(len(close), dtype=bool)
+    
+    # MACD crossover (MACD crosses above signal)
+    for i in range(30, len(close)):
+        if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+            buy_signals[i] = True
+        elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+            sell_signals[i] = True
+    
+    return buy_signals, sell_signals''',
     
     'golden': '''import numpy as np
 def compute_ema(data, period):
