@@ -168,9 +168,45 @@ class Backtester:
             Dict with backtest results including expanded metrics
         """
         try:
-            # Create local namespace for strategy execution
-            # IMPORTANT: Use local_ns as BOTH globals and locals so helper functions are accessible
-            local_ns = {'__builtins__': __builtins__}  # Include builtins for safety
+            # SECURITY: Create sandboxed namespace for strategy execution
+            # Only allow safe builtins and numpy
+            safe_builtins = {
+                'len': len,
+                'range': range,
+                'abs': abs,
+                'min': min,
+                'max': max,
+                'sum': sum,
+                'pow': pow,
+                'round': round,
+                'zip': zip,
+                'enumerate': enumerate,
+                '__import__': __import__,  # Restricted below
+                'Exception': Exception,
+            }
+            
+            # Block dangerous imports
+            class RestrictedImporter:
+                def find_module(self, fullname, path=None):
+                    dangerous = ['os', 'sys', 'subprocess', 'socket', 'requests', 
+                                'urllib', 'http', 'ftplib', 'smtplib', 'pickle',
+                                'marshal', 'ctypes', 'importlib']
+                    if any(fullname.startswith(d) for d in dangerous):
+                        return self
+                    return None
+                
+                def load_module(self, fullname):
+                    raise ImportError(f"Import of '{fullname}' is not allowed for security")
+            
+            safe_builtins['__import__'] = RestrictedImporter()
+            
+            # Add numpy (safe)
+            import numpy as np
+            safe_builtins['np'] = np
+            safe_builtins['numpy'] = np
+            
+            # Create local namespace with restricted builtins
+            local_ns = {'__builtins__': safe_builtins}
             exec(strategy_code, local_ns, local_ns)
             strategy_func = local_ns.get('strategy')
             

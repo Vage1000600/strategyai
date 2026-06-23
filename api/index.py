@@ -517,6 +517,23 @@ def get_html_page():
                                 </div>
                             </div>
                             
+                            <!-- Backtester Limitations -->
+                            <div class="mb-5 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                                <div class="flex items-start">
+                                    <span class="text-lg mr-2">⚠️</span>
+                                    <div class="text-xs text-amber-300">
+                                        <strong>Backtester Limitations:</strong>
+                                        <ul class="mt-1 space-y-1 list-disc list-inside">
+                                            <li>Long-only strategies (no short selling)</li>
+                                            <li>Full position sizing only (no partial exits)</li>
+                                            <li>Orders execute at candle close (no intra-candle)</li>
+                                            <li>Basic risk management (no trailing stops)</li>
+                                        </ul>
+                                        <p class="mt-2 text-amber-400">For educational purposes only. Not financial advice.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <!-- AI Provider Selection -->
                             <div class="mb-5 pt-4 border-t border-white/10">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">🤖 AI Provider</label>
