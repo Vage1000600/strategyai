@@ -305,19 +305,17 @@ class Backtester:
             'enumerate': enumerate, 'Exception': Exception,
         }
         
-        # Block dangerous imports
-        class RestrictedImporter:
-            def find_module(self, fullname, path=None):
-                dangerous = ['os', 'sys', 'subprocess', 'socket', 'requests',
+        # Block dangerous imports with a callable function
+        dangerous_modules = ['os', 'sys', 'subprocess', 'socket', 'requests',
                            'urllib', 'http', 'ftplib', 'smtplib', 'pickle']
-                if any(fullname.startswith(d) for d in dangerous):
-                    return self
-                return None
-            
-            def load_module(self, fullname):
-                raise ImportError(f"'{fullname}' is not allowed")
         
-        safe_builtins['__import__'] = RestrictedImporter()
+        def restricted_import(name, *args, **kwargs):
+            if any(name.startswith(d) for d in dangerous_modules):
+                raise ImportError(f"Import of '{name}' is not allowed for security")
+            # Allow safe imports using the real __import__
+            return __builtins__.__import__(name, *args, **kwargs)
+        
+        safe_builtins['__import__'] = restricted_import
         
         import numpy as np
         safe_builtins['np'] = np
