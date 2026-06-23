@@ -1,0 +1,211 @@
+# Commercial License
+
+**Last Updated**: June 23, 2026  
+**Copyright**: © 2026 Emmanuel Nenpan Hosea. All Rights Reserved.
+
+---
+
+## 📋 Summary
+
+This license governs the **commercial use** of StrategyAI and its AI-powered components (ai_generator.py, backtester.py, api/index.py).
+
+**Short version**:
+- ✅ Free for personal, academic, hackathon, and open-source use
+- ✅ Free for internal company use (non-commercial)
+- ❌ Commercial deployment requires paid license
+- ❌ SaaS/managed services require paid license
+- ❌ Resale or redistribution requires paid license
+
+---
+
+## 🎯 Permitted Uses (No License Required)
+
+You may use StrategyAI **without a commercial license** for:
+
+1. **Personal Projects**
+   - Learning, experimentation, portfolio pieces
+   - Non-commercial GitHub repositories
+   - Personal trading strategy testing
+
+2. **Academic & Research**
+   - University courses
+   - Research papers
+   - Open-source academic projects
+
+3. **Hackathon Submissions**
+   - Bitget AI Hackathon and similar competitions
+   - Prize-based competitions
+   - Time-limited event submissions
+
+4. **Open-Source Projects**
+   - MIT/Apache/GPL licensed projects
+   - Community-driven initiatives
+   - Non-commercial tools
+
+5. **Internal Testing**
+   - Proof-of-concept development
+   - Internal tooling (not customer-facing)
+   - Evaluation and benchmarking
+
+---
+
+## 🚫 Prohibited Uses (License Required)
+
+You **MUST obtain a commercial license** for:
+
+1. **Commercial Products**
+   - Selling software that incorporates StrategyAI
+   - Integrating StrategyAI into paid products
+   - Commercial SaaS offerings
+
+2. **Managed Services**
+   - Offering StrategyAI-powered services to clients
+   - Consulting engagements using StrategyAI
+   - Trading signal services powered by StrategyAI
+
+3. **Enterprise Deployment**
+   - Production systems serving paying customers
+   - High-volume commercial applications
+   - Revenue-generating trading infrastructure
+
+4. **Redistribution**
+   - Selling StrategyAI or derivatives
+   - Including in commercial SDKs
+   - White-label offerings
+
+5. **Competitive Products**
+   - Building trading platform competitors
+   - Reverse engineering for commercial gain
+   - Extracting AI algorithms for resale
+
+---
+
+## 💰 Commercial License Tiers
+
+### Tier 1: Startup License
+**Price**: $5,000 one-time  
+**For**: Companies < $1M ARR, < 10 employees
+
+**Includes**:
+- Unlimited StrategyAI usage
+- Closed-source deployment rights
+- 1 year updates & bug fixes
+- Email support (48h response)
+- Deployment assistance (2 hours)
+
+---
+
+### Tier 2: Growth License
+**Price**: $15,000 one-time  
+**For**: Companies $1M-$10M ARR, 10-50 employees
+
+**Includes**:
+- Everything in Startup License, plus:
+- Unlimited deployments
+- Multi-team usage
+- Priority support (24h response)
+- Custom indicator integration (3 indicators)
+- Quarterly check-ins
+
+---
+
+### Tier 3: Enterprise License
+**Price**: $50,000 one-time  
+**For**: Companies > $10M ARR, > 50 employees
+
+**Includes**:
+- Everything in Growth License, plus:
+- White-label rights (rebrand as your own)
+- Dedicated account manager
+- Custom feature requests (discounted rates)
+- Security audit reports
+- SLA guarantee (99.9% uptime for hosted)
+- Unlimited custom indicators
+- Multi-asset class support (crypto, forex, stocks)
+
+---
+
+### Tier 4: SaaS License
+**Price**: $3,000/month + 3% revenue share  
+**For**: Platforms offering StrategyAI as a service
+
+**Includes**:
+- Everything in Enterprise License, plus:
+- Host StrategyAI for your customers
+- Usage-based pricing flexibility
+- Revenue share dashboard
+- Co-marketing opportunities
+- API access for integration
+
+---
+
+## 📧 How to Obtain a License
+
+**Contact**: emmanuelhosea09@gmail.com
+
+**Include in your inquiry**:
+1. Company name and size
+2. Intended use case
+3. Expected deployment scale
+4. Revenue range (for appropriate tier)
+
+**Response Time**: 24-48 hours
+
+---
+
+## 🔒 Enforcement
+
+Violations of this license may result in:
+- DMCA takedown notices
+- Legal action for copyright infringement
+- Damages up to $150,000 per violation (US copyright law)
+
+**We prefer cooperation over litigation.** Reach out if you're unsure about compliance.
+
+---
+
+## ❓ FAQ
+
+### Can I use StrategyAI for my personal trading?
+**Yes!** MIT license covers personal use completely. No commercial license needed.
+
+### Can I use StrategyAI in my hedge fund?
+**Yes, for internal research** under MIT license. If you want to keep modifications proprietary or serve external clients, you need a commercial license.
+
+### Can I host StrategyAI as a SaaS for my clients?
+**No.** You need a SaaS License ($3,000/month + revenue share).
+
+### What if I just want to use the AI code generation, not the backtesting?
+Same rules apply. All AI components require commercial licensing for paid use.
+
+### Do you offer discounts for startups?
+**Yes!** Contact us with your situation. We offer:
+- 50% off for pre-seed/seed stage
+- Deferred payment until revenue
+- Equity-based licensing (case-by-case)
+
+### What payment methods do you accept?
+- Wire transfer
+- ACH
+- Cryptocurrency (USDC, USDT, BTC, ETH)
+- Invoice (Enterprise+ only)
+
+---
+
+## 📝 License Compliance Checklist
+
+Before using StrategyAI commercially, ask yourself:
+
+- [ ] Am I distributing this software (or modified version)?
+- [ ] Am I offering this as a service to external users?
+- [ ] Am I embedding this in a proprietary product?
+- [ ] Do I want to keep my modifications closed-source?
+- [ ] Am I making money from this (directly or indirectly)?
+
+**If you answered YES to any:** You need a commercial license.
+
+**If you answered NO to all:** MIT license covers your use case.
+
+---
+
+*This license is modeled after successful open-core companies. Last updated: June 23, 2026.*

@@ -7,7 +7,7 @@
 ![Bitget AI Hackathon](https://img.shields.io/badge/Bitget%20AI%20Hackathon-S1-blue)
 ![Track](https://img.shields.io/badge/Track-Trading%20Infra-green)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
-![License](https://img.shields.io/badge/License-AGPL--3.0-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 ![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
 ![No Setup](https://img.shields.io/badge/No%20Setup%20Required-green)
 
@@ -52,17 +52,26 @@ Open: http://localhost:8000
 
 ## 📜 Licensing
 
-**StrategyAI is open source under AGPL-3.0** — free forever for:
+**StrategyAI is open source under MIT License** — free forever for:
 - ✅ Personal use
 - ✅ Research & education
 - ✅ Non-profit organizations
 - ✅ Open-source projects
+- ✅ Hackathon submissions
 
-**Need closed-source usage?** [Commercial licenses available](LICENSE-COMMERCIAL.md) for:
+**Need commercial usage?** [Commercial licenses available](LICENSE-COMMERCIAL) for:
 - 🏢 Proprietary trading firms
 - 🏦 Hedge funds & asset managers
 - 💻 SaaS platforms
 - 🏷️ White-label solutions
+
+**Quick Guide:**
+| Use Case | License | Cost |
+|----------|---------|------|
+| Personal/Hackathon | MIT | FREE |
+| Startup MVP | Commercial | $5,000 |
+| Enterprise | Commercial | $15,000-$50,000 |
+| SaaS | Commercial + Rev Share | $3,000/mo |
 
 ---
 
