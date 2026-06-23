@@ -17,9 +17,9 @@
     }
   ],
   "env": {
-    "BITGET_API_KEY": "@bitget-api-key",
-    "BITGET_API_SECRET": "@bitget-api-secret",
-    "DEEPSEEK_API_KEY": "@deepseek-api-key"
+    "BITGET_API_KEY": "",
+    "BITGET_API_SECRET": "",
+    "DEEPSEEK_API_KEY": ""
   },
   "outputDirectory": ".vercel/output"
 }
