@@ -41,6 +41,8 @@ class Backtester:
             Dict with backtest results
         """
         try:
+            print(f"[BACKTEST] Starting backtest with {len(df)} candles, initial_capital={self.initial_capital}")
+            
             # SECURITY: Create sandboxed namespace
             safe_builtins = self._create_safe_builtins()
             local_ns = {'__builtins__': safe_builtins}
@@ -48,7 +50,10 @@ class Backtester:
             strategy_func = local_ns.get('strategy')
             
             if not strategy_func:
+                print("[BACKTEST] ERROR: No strategy function found")
                 return {"error": "Strategy function not found. Add 'def strategy(data):'"}
+            
+            print("[BACKTEST] Strategy function loaded successfully")
             
             # Initialize state
             capital = self.initial_capital
@@ -269,9 +274,12 @@ class Backtester:
             
             # Ensure we always return valid data
             if not equity_curve:
+                print("[BACKTEST] WARNING: equity_curve is empty, setting to [initial_capital]")
                 equity_curve = [self.initial_capital]
             if not drawdown_curve:
                 drawdown_curve = [0]
+            
+            print(f"[BACKTEST] Results: final_capital={final_capital}, total_trades={total_trades}, equity_curve_len={len(equity_curve)}")
             
             return {
                 'success': True,
@@ -289,7 +297,7 @@ class Backtester:
                     'max_consecutive_wins': max_consecutive_wins,
                     'max_consecutive_losses': max_consecutive_losses,
                 },
-                'trades': trades[:50],  # Limit to first 50 for display
+                'trades': trades[:50],
                 'equity_curve': [float(x) for x in equity_curve],
                 'drawdown_curve': [float(x) for x in drawdown_curve],
                 'initial_capital': float(self.initial_capital)
