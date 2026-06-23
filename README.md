@@ -21,7 +21,7 @@ StrategyAI lets you **backtest trading strategies without writing code**. Just d
 
 **Works instantly** with public Bitget API (no API key needed for testing).
 
-Want unlimited access? Add your free Bitget API key in the sidebar.
+Want unlimited access? Add your free Bitget API key in the settings.
 
 ---
 
@@ -43,10 +43,10 @@ cd strategyai
 pip install -r requirements.txt
 
 # 3. Run the app
-streamlit run app.py
+uvicorn main:app --reload
 ```
 
-Open: http://localhost:8501
+Open: http://localhost:8000
 
 ---
 
@@ -57,7 +57,7 @@ Open: http://localhost:8501
 | 🆓 **No API Key Required** | Works with public Bitget API instantly |
 | 🤖 **Hybrid AI** | Local reasoning (default) + DeepSeek (optional) |
 | 📊 **Backtesting** | Test on historical Bitget data |
-| 📈 **Visual Charts** | Equity curve, drawdown, trade breakdown |
+| 📈 **Visual Charts** | Interactive equity curve & drawdown charts |
 | 📉 **Risk Metrics** | Sharpe, drawdown, win rate, profit factor |
 | 💾 **Export** | Download CSV, JSON, or Python code |
 | ⚡ **Fast** | Results in 5-10 seconds |
@@ -114,7 +114,7 @@ Input: Describe your own strategy in plain English!
 3. Profile → API Management
 4. Create new API key
 5. Enable **"Read-only"** permissions
-6. Enter key in app sidebar
+6. Enter key in app settings
 
 ---
 
@@ -122,12 +122,12 @@ Input: Describe your own strategy in plain English!
 
 | Component | Technology |
 |-----------|------------|
-| Frontend | Streamlit |
+| Frontend | FastAPI + Tailwind CSS + Plotly.js |
 | AI Engine | Local parser + DeepSeek (optional) |
 | Backtesting | Custom Python |
 | Data | Bitget API (public or personal) |
-| Charts | Plotly |
-| Deployment | Vercel |
+| Charts | Plotly.js |
+| Deployment | Vercel (serverless) |
 
 ---
 
@@ -152,12 +152,12 @@ The backtester calculates:
 
 ```
 strategyai/
-├── api/
-│   └── index.py          # Vercel serverless wrapper
-├── app.py                # Main Streamlit UI
+├── main.py               # FastAPI web application
+├── templates/
+│   └── index.html        # Web UI (Tailwind CSS)
 ├── ai_generator.py       # Hybrid AI (Local + DeepSeek)
-├── backtester.py         # Backtesting engine (public + personal API)
-├── visualization.py      # Charts & metrics
+├── backtester.py         # Backtesting engine
+├── visualization.py      # Chart generation
 ├── requirements.txt      # Dependencies
 ├── vercel.json          # Vercel config
 ├── README.md            # This file
@@ -178,17 +178,17 @@ This project was built for the **Bitget AI Hackathon Season 1** (Trading Infra t
 
 ## 🚀 Deploy Your Own
 
-### Deploy to Vercel (5 minutes):
+### Deploy to Vercel (3 minutes):
 
 1. Fork this repo
 2. Go to https://vercel.com/new
 3. Import your fork
-4. Select "Streamlit" preset
-5. Add environment variables (all optional):
-   - `BITGET_API_KEY` (optional - uses public API if missing)
-   - `BITGET_API_SECRET` (optional)
-   - `DEEPSEEK_API_KEY` (optional - for better AI)
-6. Deploy!
+4. Deploy! (No environment variables required)
+
+**Optional:** Add environment variables for better performance:
+- `BITGET_API_KEY` - Your personal Bitget API key
+- `BITGET_API_SECRET` - Your Bitget API secret
+- `DEEPSEEK_API_KEY` - DeepSeek API key for better AI
 
 **Full guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
 

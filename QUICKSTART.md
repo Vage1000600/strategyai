@@ -1,195 +1,190 @@
-# 🚀 StrategyAI - Quick Start Guide
+# Quick Start Guide
 
-**For the Team:** Follow these steps to get started in 15 minutes.
+## 🚀 3-Minute Setup
+
+### Step 1: Open the App
+
+**Live Demo:** https://strategyai.vercel.app
+
+No installation needed! Works instantly.
 
 ---
 
-## ⚡ Day 1 Setup (Do This First!)
+### Step 2: Choose a Strategy
 
-### Step 1: Create GitHub Repo (5 min)
+**Option A: Quick Test (Recommended for First Time)**
 
-1. Go to https://github.com/new
-2. Repo name: `strategyai`
-3. Description: "AI-Powered Trading Strategy Backtester for Bitget AI Hackathon"
-4. Public repo ✅
-5. Click "Create repository"
+Click one of the preset buttons:
+- 📊 **RSI Strategy** - Classic momentum strategy
+- 📈 **MACD Crossover** - Trend-following strategy
+- 🎯 **Golden Cross** - Moving average crossover
+- 🔥 **Bollinger Breakout** - Volatility breakout
 
-### Step 2: Clone & Setup (5 min)
+**Option B: Custom Strategy**
 
-```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/strategyai.git
-cd strategyai
-
-# Create virtual environment
-python -m venv venv
-
-# Activate venv
-# Mac/Linux:
-source venv/bin/activate
-# Windows:
-venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+Type your own strategy in plain English:
+```
+"Buy when RSI < 30 and MACD > signal, sell when RSI > 70"
 ```
 
-### Step 3: Get API Keys (5 min)
+---
 
-**DeepSeek API Key:**
-1. Go to https://platform.deepseek.com/
-2. Sign up / Log in
-3. Go to API Keys section
-4. Create new key
-5. Copy the key
+### Step 3: Configure Settings (Optional)
 
-**Bitget API Key:**
-1. Go to https://www.bitget.com/
-2. Sign up / Log in
-3. Go to Profile → API Management
-4. Create new API key
-5. Enable "Read-only" permissions (no trading needed)
-6. Copy key and secret
+**Basic Settings:**
+- Trading Pair: BTC/USDT, ETH/USDT, etc.
+- Timeframe: 1h, 4h, 1d
 
-### Step 4: Configure Environment
+**Advanced Settings:**
+- Initial Capital: Default $1000
+- Fee Rate: Default 0.1%
+- Slippage: Default 0.05%
 
-```bash
-# Copy env template
-cp .env.example .env
+**API Key (Optional):**
+- Leave empty → Uses public Bitget API (rate-limited)
+- Add your key → Unlimited access (free to get)
 
-# Edit .env file
-nano .env  # or use your favorite editor
+---
 
-# Paste your API keys:
-DEEPSEEK_API_KEY=sk-your-actual-key
-BITGET_API_KEY=your-actual-key
-BITGET_API_SECRET=your-actual-secret
+### Step 4: Click "Generate & Backtest"
+
+Wait 5-10 seconds. You'll see:
+
+1. ✅ **Generated Code** - Your strategy converted to Python
+2. 📊 **Performance Metrics** - PnL, Sharpe, Win Rate, etc.
+3. 📈 **Equity Curve** - Visual chart of portfolio growth
+4. 📉 **vs HODL** - How your strategy compares to buy & hold
+
+---
+
+## 📖 Example Strategies to Try
+
+### Beginner
+
+```
+Buy when RSI < 30, sell when RSI > 70
 ```
 
-### Step 5: Test Run
-
-```bash
-# Run the app
-streamlit run app.py
+```
+Buy when MACD crosses above signal, sell when crosses below
 ```
 
-Open http://localhost:8501 in your browser.
+### Intermediate
 
-If you see the StrategyAI interface → ✅ Setup complete!
-
----
-
-## 👥 Team Task Assignment
-
-Share this with your team and assign roles:
-
-| Person | Role | Files to Work On | Day 1 Task |
-|--------|------|------------------|------------|
-| **Person 1** | AI Integration Lead | `ai_generator.py` | Test AI code generation with 5 example strategies |
-| **Person 2** | Backtesting Lead | `backtester.py`, `bitget_api.py` | Test data fetching + backtest with hard-coded strategy |
-| **Person 3** | Visualization Lead | `visualization.py` | Create all 4 chart types, test with sample data |
-| **Person 4** | UI/UX Lead | `app.py`, `README.md` | Integrate all modules, deploy to Streamlit Cloud |
-
----
-
-## 📅 Daily Checkpoints
-
-### Day 1 (Today)
-- [ ] GitHub repo created
-- [ ] All team members can run locally
-- [ ] API keys configured
-- [ ] Hello World: Hard-coded strategy works end-to-end
-
-### Day 2
-- [ ] AI code generation working (Person 1)
-- [ ] Backtester fetching Bitget data (Person 2)
-- [ ] Basic charts rendering (Person 3)
-- [ ] UI skeleton ready (Person 4)
-
-### Day 3
-- [ ] AI → Backtester integration working
-- [ ] All indicators implemented (RSI, MACD, EMA, etc.)
-- [ ] Equity curve + drawdown charts done
-- [ ] Deployed to Streamlit Cloud (test URL)
-
-### Day 4
-- [ ] All features working
-- [ ] Bug fixes
-- [ ] Example strategies added
-- [ ] Demo video recorded
-
-### Day 5
-- [ ] Polish UI
-- [ ] Write README
-- [ ] Test with 10+ different strategies
-- [ ] Fix edge cases
-
-### Day 6
-- [ ] Final testing
-- [ ] Prepare submission
-- [ ] Create demo video (2-3 min)
-- [ ] Write X/Twitter post
-
-### Day 7 (June 30 - DEADLINE)
-- [ ] Submit before 11:59 PM UTC
-- [ ] Post on X tagging @Bitget_AI
-- [ ] Celebrate! 🎉
-
----
-
-## 🐛 Common Issues & Fixes
-
-### Issue: "Module not found: streamlit"
-**Fix:** Make sure virtual environment is activated:
-```bash
-source venv/bin/activate  # Mac/Linux
-# or
-venv\Scripts\activate  # Windows
+```
+Buy when 50 EMA crosses above 200 EMA (golden cross), sell on death cross
 ```
 
-### Issue: "DeepSeek API key invalid"
-**Fix:** Check your key in `.env` file, make sure no extra spaces
+```
+Buy when price breaks above upper Bollinger Band, sell at middle band
+```
 
-### Issue: "Bitget API rate limit"
-**Fix:** Wait 1 minute between requests, or reduce `limit` parameter
+### Advanced
 
-### Issue: "Strategy code execution failed"
-**Fix:** Check AI-generated code has correct function signature: `def strategy(data):`
+```
+Buy when RSI < 30 AND MACD > signal AND price > 200 EMA, sell when RSI > 70
+```
 
----
-
-## 📞 Team Communication
-
-**Daily Standup (15 min):**
-- What did I do yesterday?
-- What will I do today?
-- Any blockers?
-
-**Tools:**
-- Discord/Telegram: Quick questions
-- GitHub Issues: Bug tracking
-- Google Doc: Shared notes
+```
+Buy when price closes above 20-day high, sell at 10% profit or 5% stop loss
+```
 
 ---
 
-## 🎯 Success Checklist
+## 📊 Understanding Results
 
-By end of Day 3, you should have:
-- [ ] Working local setup for all team members
-- [ ] AI generating valid code from English
-- [ ] Backtester running on Bitget data
-- [ ] Charts displaying results
-- [ ] Deployed test URL
+### Key Metrics
 
-By end of Day 7, you should have:
-- [ ] Polished demo
-- [ ] Demo video (2-3 min)
-- [ ] README with screenshots
-- [ ] Submission form filled
-- [ ] X post with @Bitget_AI tag
+| Metric | What It Means | Good Value |
+|--------|---------------|------------|
+| **Total PnL** | Net profit/loss in USDT | Positive |
+| **Return %** | Percentage return on capital | > 10% |
+| **Sharpe Ratio** | Risk-adjusted return | > 1.0 |
+| **Max Drawdown** | Largest peak-to-trough decline | < 20% |
+| **Win Rate** | Percentage of winning trades | > 50% |
+| **Profit Factor** | Gross profit / Gross loss | > 1.5 |
+| **Beat HODL** | Outperformance vs buy & hold | Positive |
+
+### Green Flags ✅
+
+- Sharpe ratio > 1.0
+- Win rate > 50%
+- Profit factor > 1.5
+- Max drawdown < 20%
+- Consistent equity curve (smooth upward trend)
+
+### Red Flags 🚩
+
+- Sharpe ratio < 0.5
+- Win rate < 40%
+- Max drawdown > 30%
+- Erratic equity curve
+- Only 1-2 trades (not statistically significant)
 
 ---
 
-**Let's build something amazing! 🚀**
+## 💡 Pro Tips
 
-Questions? Reach out to your team leads or post in the hackathon Discord!
+### 1. Start Simple
+Begin with basic strategies (RSI, MACD) before combining multiple indicators.
+
+### 2. Test Multiple Timeframes
+A strategy that works on 1h might not work on 1d. Test both!
+
+### 3. Compare to HODL
+If your strategy doesn't beat buy & hold, maybe just HODL is better.
+
+### 4. Watch Drawdown
+High returns with 50% drawdown = too risky. Aim for smooth growth.
+
+### 5. Iterate
+Use the generated code as a starting point. Refine and retest!
+
+---
+
+## 🔧 Troubleshooting
+
+### "Strategy execution failed"
+- Your strategy description is too vague
+- Use simple, clear language
+- Reference specific indicators (RSI, MACD, EMA, etc.)
+
+### "No trades executed"
+- Your conditions might be too strict
+- Try a longer timeframe or different parameters
+- Check if indicators are being detected
+
+### "Public API failed"
+- You hit the rate limit
+- Add your free Bitget API key in settings
+- Wait a few minutes and retry
+
+### Results look wrong
+- Check your strategy logic
+- Verify the generated code matches your intent
+- Try a different timeframe or trading pair
+
+---
+
+## 🎓 Learn More
+
+- **Documentation:** https://github.com/Vage1000600/strategyai/wiki
+- **Video Tutorial:** [Coming soon]
+- **Community:** Bitget AI Hackathon Discord
+
+---
+
+## 🏆 Next Steps
+
+1. ✅ Test your first strategy
+2. 📊 Analyze the results
+3. 🔧 Refine and optimize
+4. 📈 Compare multiple strategies
+5. 💾 Export your best strategies
+6. 🚀 Deploy to production (optional)
+
+---
+
+*Happy Backtesting! 📈*
+
+**Remember:** Past performance ≠ future results. Always do your own research!

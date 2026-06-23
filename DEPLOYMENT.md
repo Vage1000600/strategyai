@@ -1,180 +1,153 @@
-# 🚀 Deployment Guide - Vercel
+# Deployment Guide
 
-## Quick Deploy (5 minutes)
+## Deploy to Vercel (Recommended)
 
-### Option 1: Vercel Dashboard (Recommended - Easiest)
+### One-Click Deploy
 
-1. **Go to** https://vercel.com/new
-2. **Sign in** with GitHub
-3. **Import Repository:** Select `Vage1000600/strategyai`
-4. **Framework Preset:** Select **"Streamlit"**
-5. **Configure Environment Variables:**
-   - `DEEPSEEK_API_KEY` → Your DeepSeek API key
-   - `BITGET_API_KEY` → Your Bitget API key
-   - `BITGET_API_SECRET` → Your Bitget API secret
-6. **Click "Deploy"**
-7. **Wait 2-3 minutes** for build to complete
-8. **Done!** You'll get a URL like: `https://strategyai.vercel.app`
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Vage1000600/strategyai)
+
+### Manual Deployment
+
+1. **Go to Vercel:** https://vercel.com/dashboard
+2. **Click "Add New Project"**
+3. **Import your GitHub repo:** `Vage1000600/strategyai`
+4. **Configure:**
+   - Framework Preset: `Python`
+   - Root Directory: `./`
+   - **No environment variables required!** (uses public API by default)
+5. **Click "Deploy"**
+
+### Environment Variables (Optional)
+
+Add these in Vercel Dashboard → Settings → Environment Variables:
+
+| Name | Required? | Default | Purpose |
+|------|-----------|---------|---------|
+| `BITGET_API_KEY` | ❌ No | Empty | Your Bitget API key (uses public API if empty) |
+| `BITGET_API_SECRET` | ❌ No | Empty | Your Bitget API secret |
+| `DEEPSEEK_API_KEY` | ❌ No | Empty | DeepSeek API key for better AI (uses local AI if empty) |
+
+**App works with all variables empty!** ✅
+
+### Auto-Deploy
+
+Vercel automatically deploys on every push to `main` branch.
 
 ---
 
-### Option 2: Vercel CLI (For Advanced Users)
+## Run Locally
+
+### Prerequisites
+
+- Python 3.9+
+- pip
+
+### Setup
 
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Login to Vercel
-vercel login
-
-# Navigate to project
+# 1. Clone the repo
+git clone https://github.com/Vage1000600/strategyai.git
 cd strategyai
 
-# Deploy to preview
-vercel
+# 2. Install dependencies
+pip install -r requirements.txt
 
-# Deploy to production
-vercel --prod
+# 3. Run the app
+uvicorn main:app --reload
+
+# 4. Open browser
+# http://localhost:8000
+```
+
+### Production Mode
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ---
 
-## 🔧 Environment Variables Setup
+## Get Bitget API Key (Optional)
 
-### In Vercel Dashboard:
-
-1. Go to your project: https://vercel.com/dashboard
-2. Click on `strategyai`
-3. Go to **Settings** → **Environment Variables**
-4. Add these 3 variables:
-
-| Name | Value | Environment |
-|------|-------|-------------|
-| `DEEPSEEK_API_KEY` | `sk-your-deepseek-key` | Production, Preview, Development |
-| `BITGET_API_KEY` | `your-bitget-key` | Production, Preview, Development |
-| `BITGET_API_SECRET` | `your-bitget-secret` | Production, Preview, Development |
-
-5. Click **Save**
+1. Go to https://www.bitget.com/
+2. Sign up / Log in
+3. Profile → API Management
+4. Create new API key
+5. Enable **"Read-only"** permissions
+6. Copy key and secret
+7. Add to Vercel environment variables or local `.env` file
 
 ---
 
-## 🧪 Testing After Deployment
+## Get DeepSeek API Key (Optional)
 
-### 1. Check Deployment Status
-```
-https://vercel.com/Vage1000600/strategyai/deployments
-```
+1. Go to https://platform.deepseek.com/
+2. Sign up / Log in
+3. Get API key
+4. Add to environment variables
 
-### 2. Test Live App
-```
-https://strategyai-[your-username].vercel.app
-```
+**Benefits:** Better code generation for complex strategies
 
-### 3. Test These Features:
-- [ ] Load RSI Strategy (one-click button)
-- [ ] Run backtest
-- [ ] Check results display
-- [ ] Download CSV export
-- [ ] Check for errors in Vercel Functions logs
+**Default:** Local AI reasoning (no API key needed)
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Issue: "Module not found: streamlit"
-**Fix:** Make sure `requirements.txt` is in repo root with all dependencies:
+### Deployment Fails
+
+**Check Vercel build logs** for errors. Common issues:
+
+- Missing dependencies → Update `requirements.txt`
+- Python version mismatch → Vercel auto-detects Python 3.9+
+- Import errors → Check file paths in `main.py`
+
+### App Returns Errors
+
+**Public API rate-limited?**
+- Add your Bitget API key in settings
+
+**Strategy code error?**
+- Rephrase strategy in simpler terms
+- Use supported indicators: RSI, MACD, EMA, SMA, BB, ATR
+
+### Local Development
+
+**Port already in use?**
+```bash
+uvicorn main:app --reload --port 8001
 ```
-streamlit==1.35.0
-plotly==5.22.0
-openai==1.35.0
-pandas==2.2.2
-numpy==1.26.4
-ccxt==4.3.50
-requests==2.32.3
-python-dotenv==1.0.1
-```
 
-### Issue: "Environment variables not set"
-**Fix:** 
-1. Go to Vercel Dashboard → Project → Settings → Environment Variables
-2. Make sure all 3 variables are set
-3. Redeploy: `vercel --prod`
-
-### Issue: "Build failed"
-**Fix:**
-1. Check build logs: Vercel Dashboard → Deployments → View Build Logs
-2. Look for error messages
-3. Common fixes:
-   - Missing dependencies in `requirements.txt`
-   - Python version mismatch (use 3.9)
-   - Syntax errors in code
-
-### Issue: "App loads but shows errors"
-**Fix:**
-1. Check Vercel Functions logs
-2. Test API keys locally first
-3. Make sure keys have correct permissions
-
----
-
-## 📊 Vercel Dashboard Features
-
-### Analytics
-- View deployment history
-- Check build times
-- Monitor errors
-- View usage metrics
-
-### Preview Deployments
-- Every branch gets a preview URL
-- Test before merging to main
-- Share with team for feedback
-
-### Custom Domain (Optional)
-- Go to Settings → Domains
-- Add your custom domain
-- Free SSL included
-
----
-
-## 🎯 Post-Deployment Checklist
-
-```
-☐ App loads without errors
-☐ All 4 strategy buttons work
-☐ Backtest completes successfully
-☐ Results display correctly
-☐ Export buttons work (CSV, JSON, Code)
-☐ Strategy history saves
-☐ Advanced settings adjustable
-☐ No console errors
-☐ Mobile responsive
-☐ Share URL with team for testing
+**Missing dependencies?**
+```bash
+pip install -r requirements.txt --upgrade
 ```
 
 ---
 
-## 🔗 Quick Links
+## Custom Domain
 
-| Resource | URL |
-|----------|-----|
-| **Vercel Dashboard** | https://vercel.com/dashboard |
-| **Vercel Docs** | https://vercel.com/docs |
-| **Streamlit on Vercel** | https://vercel.com/docs/frameworks/streamlit |
-| **Your Project** | https://vercel.com/Vage1000600/strategyai |
+1. Go to Vercel Dashboard → Your Project → Settings → Domains
+2. Add your domain
+3. Configure DNS records as instructed
+4. Wait for SSL certificate (automatic)
 
 ---
 
-## 💡 Pro Tips
+## Performance Tips
 
-1. **Use Preview Deployments:** Create a branch for testing, Vercel auto-deploys
-2. **Enable Analytics:** Free usage analytics in Vercel dashboard
-3. **Set Up Alerts:** Get notified on deployment failures
-4. **Use Custom Domain:** Makes it look more professional for hackathon
-5. **Keep `.env` out of repo:** Never commit API keys!
+- **Cold starts:** Vercel serverless functions have ~1-2s cold start
+- **Optimize:** Keep backtest limit reasonable (500 candles default)
+- **Cache:** Consider adding Redis for frequently-used strategies (Pro tier)
 
 ---
 
-**Good luck with deployment! 🚀**
+## Support
 
-Questions? Check Vercel docs or reach out to the team.
+- **GitHub Issues:** https://github.com/Vage1000600/strategyai/issues
+- **Hackathon Forum:** https://www.bitget.com/activity-hub/hackathon
+- **Documentation:** https://github.com/Vage1000600/strategyai/wiki
+
+---
+
+*Built for Bitget AI Hackathon S1*
