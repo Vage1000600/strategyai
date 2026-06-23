@@ -199,30 +199,30 @@ class Backtester:
             for i in range(1, len(df)):
                 row = df.iloc[i]
                 
-                # Prepare data dict for strategy
+                # Prepare data dict for strategy - pass ARRAYS (full history up to current candle)
+                # This allows strategies to compute indicators on the fly
                 data = {
-                    'close': row['close'],
-                    'open': row['open'],
-                    'high': row['high'],
-                    'low': row['low'],
-                    'rsi': row['rsi'],
-                    'macd': row['macd'],
-                    'signal': row['signal'],
-                    'prev_macd': row['prev_macd'],
-                    'prev_signal': row['prev_signal'],
-                    'ema50': row['ema50'],
-                    'ema200': row['ema200'],
-                    'prev_ema50': row['prev_ema50'],
-                    'prev_ema200': row['prev_ema200'],
-                    'sma20': row['sma20'],
-                    'sma50': row['sma50'],
-                    'prev_sma20': row['prev_sma20'],
-                    'prev_sma50': row['prev_sma50'],
-                    'bb_upper': row['bb_upper'],
-                    'bb_lower': row['bb_lower'],
-                    'bb_middle': row['bb_middle'],
-                    'bb_position': row['bb_position'],
-                    'atr': row['atr'],
+                    'close': df['close'].iloc[:i+1].values,  # Array of all closes up to now
+                    'open': df['open'].iloc[:i+1].values,
+                    'high': df['high'].iloc[:i+1].values,
+                    'low': df['low'].iloc[:i+1].values,
+                    'volume': df['volume'].iloc[:i+1].values,
+                    'rsi': df['rsi'].iloc[:i+1].values,
+                    'macd': df['macd'].iloc[:i+1].values,
+                    'signal': df['signal'].iloc[:i+1].values,
+                    'ema50': df['ema50'].iloc[:i+1].values,
+                    'ema200': df['ema200'].iloc[:i+1].values,
+                    'sma20': df['sma20'].iloc[:i+1].values,
+                    'sma50': df['sma50'].iloc[:i+1].values,
+                    'bb_upper': df['bb_upper'].iloc[:i+1].values,
+                    'bb_middle': df['bb_middle'].iloc[:i+1].values,
+                    'bb_lower': df['bb_lower'].iloc[:i+1].values,
+                    'atr': df['atr'].iloc[:i+1].values,
+                    # Also provide current values for convenience
+                    'current_close': row['close'],
+                    'current_open': row['open'],
+                    'current_high': row['high'],
+                    'current_low': row['low'],
                 }
                 
                 # Get strategy signal
@@ -232,7 +232,25 @@ class Backtester:
                     return {"error": f"Strategy execution failed at candle {i}: {str(e)}"}
                 
                 # Execute trades
-                if signal == 'buy' and position == 0:
+                # Note: strategy should return 'buy'/'sell' strings, or (buy_signals, sell_signals) tuples
+                # Handle both return types
+                if isinstance(signal, tuple):
+                    # Returns (buy_signals, sell_signals) arrays
+                    buy_signal = signal[0][-1] if len(signal[0]) > 0 else False
+                    sell_signal = signal[1][-1] if len(signal[1]) > 0 else False
+                elif isinstance(signal, str):
+                    # Returns 'buy'/'sell'/'hold'
+                    buy_signal = (signal == 'buy')
+                    sell_signal = (signal == 'sell')
+                elif isinstance(signal, bool):
+                    # Returns single bool (True = buy, False = hold)
+                    buy_signal = signal
+                    sell_signal = False
+                else:
+                    buy_signal = False
+                    sell_signal = False
+                
+                if buy_signal and position == 0:
                     # Enter long position
                     entry_price = row['close'] * (1 + self.slippage)
                     position_size = capital / entry_price
@@ -240,7 +258,7 @@ class Backtester:
                     position = 1
                     entry_time = row.name
                     
-                elif signal == 'sell' and position > 0:
+                elif sell_signal and position > 0:
                     # Exit long position
                     exit_price = row['close'] * (1 - self.slippage)
                     exit_value = position_size * exit_price
