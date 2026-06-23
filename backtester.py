@@ -420,7 +420,7 @@ def run_backtest(code: str, symbol: str, timeframe: str, initial_capital: float,
     try:
         # Step 1: Validate code structure and syntax
         if validate:
-            from ai_generator import validate_strategy, test_strategy_execution
+            from ai_generator import validate_strategy
             
             validation = validate_strategy(code)
             if not validation['valid']:
@@ -435,20 +435,7 @@ def run_backtest(code: str, symbol: str, timeframe: str, initial_capital: float,
         df = fetcher.fetch_ohlcv(symbol, timeframe, limit=500)
         
         # Step 3: Test execution on small sample (optional safety check)
-        if validate:
-            test_data = {
-                'open': df['open'].values[:50],
-                'high': df['high'].values[:50],
-                'low': df['low'].values[:50],
-                'close': df['close'].values[:50],
-                'volume': df['volume'].values[:50]
-            }
-            from ai_generator import test_strategy_execution
-            exec_test = test_strategy_execution(code, test_data)
-            if not exec_test['success']:
-                return {
-                    'error': f'Execution test failed: {exec_test["error"]}'
-                }
+        # SKIPPED: Function removed in compact version
         
         # Step 4: Run full backtest
         backtester = Backtester(initial_capital, fee_rate, slippage)

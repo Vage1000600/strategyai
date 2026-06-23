@@ -504,6 +504,36 @@ def get_html_page():
                                 </div>
                             </div>
                             
+                            <!-- AI Provider Selection -->
+                            <div class="mb-5 pt-4 border-t border-white/10">
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">🤖 AI Provider</label>
+                                <select id="ai_provider" name="ai_provider" class="input-field">
+                                    <option value="local">Local (Free, Fast)</option>
+                                    <option value="ollama">Ollama (Local LLM)</option>
+                                    <option value="deepseek">DeepSeek (Advanced)</option>
+                                    <option value="claude">Claude (Best Quality)</option>
+                                </select>
+                                <p class="text-xs text-slate-500 mt-2">Local uses templates. Ollama/DeepSeek/Claude for complex strategies.</p>
+                            </div>
+                            
+                            <!-- DeepSeek API Key -->
+                            <div class="mb-5">
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">
+                                    🔑 DeepSeek API Key <span class="text-slate-500 text-xs">(Optional)</span>
+                                </label>
+                                <input type="password" id="deepseek_api_key" name="deepseek_api_key" class="input-field" 
+                                    placeholder="sk-..." autocomplete="off">
+                            </div>
+                            
+                            <!-- Claude API Key -->
+                            <div class="mb-5">
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">
+                                    🔑 Claude API Key <span class="text-slate-500 text-xs">(Optional)</span>
+                                </label>
+                                <input type="password" id="claude_api_key" name="claude_api_key" class="input-field" 
+                                    placeholder="sk-ant-..." autocomplete="off">
+                            </div>
+                            
                             <div class="mb-5 pt-4 border-t border-white/10">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">📊 Trading Pair</label>
                                 <select id="symbol" name="symbol" class="input-field">
