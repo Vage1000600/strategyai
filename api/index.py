@@ -32,6 +32,8 @@ app.add_middleware(
 
 def convert_timestamps(obj):
     """Convert pandas Timestamps and other non-serializable objects to JSON-friendly format"""
+    import math
+    
     if isinstance(obj, dict):
         return {k: convert_timestamps(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -40,7 +42,15 @@ def convert_timestamps(obj):
         return obj.isoformat()
     elif hasattr(obj, 'tolist'):  # numpy types
         return obj.tolist()
-    elif isinstance(obj, (int, float, str, bool, type(None))):
+    elif isinstance(obj, float):
+        # Handle inf, -inf, and nan
+        if math.isinf(obj):
+            return None  # or 0.0, depending on preference
+        elif math.isnan(obj):
+            return None
+        else:
+            return obj
+    elif isinstance(obj, (int, str, bool, type(None))):
         return obj
     else:
         return str(obj)
