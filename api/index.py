@@ -68,6 +68,9 @@ async def root():
 @app.post("/backtest/generate")
 async def generate_strategy(
     strategy_input: str = Form(...),
+    ai_provider: str = Form('local'),
+    deepseek_api_key: str = Form(None),
+    claude_api_key: str = Form(None),
 ):
     """Generate strategy code from natural language - show to user for review
     
@@ -77,10 +80,21 @@ async def generate_strategy(
     3. Run backtest with generated code
     """
     try:
-        # Generate code
-        generated = generate_strategy_code(strategy_input)
+        # Build API keys dict
+        api_keys = {}
+        if deepseek_api_key:
+            api_keys['deepseek'] = deepseek_api_key
+        if claude_api_key:
+            api_keys['claude'] = claude_api_key
+        
+        # Generate code with selected provider
+        generated = generate_strategy_code(strategy_input, provider=ai_provider, api_keys=api_keys)
         if 'error' in generated:
-            return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
+            # If provider failed and has fallback, try local
+            if generated.get('fallback') == 'local':
+                generated = generate_strategy_code(strategy_input, provider='local')
+            else:
+                return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
         
         # Validate the generated code
         validation = validate_strategy(generated['code'])
@@ -91,6 +105,7 @@ async def generate_strategy(
             'strategy_type': generated.get('strategy_type', 'Custom'),
             'indicators': generated.get('indicators', []),
             'reasoning': generated.get('reasoning', ''),
+            'provider': generated.get('provider', ai_provider),
             'validation': {
                 'valid': validation['valid'],
                 'errors': validation['errors'],

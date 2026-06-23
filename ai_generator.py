@@ -1,13 +1,19 @@
 """
-StrategyAI - AI Strategy Code Generator
-Enhanced with few-shot prompting, validation, and chain-of-thought reasoning
+StrategyAI - Multi-Provider AI Strategy Generator
+Supports: Local (default), DeepSeek, Claude
+
+Features:
+- Switch between AI providers
+- Fallback handling
+- Provider-specific optimizations
 """
 
 import json
 import os
-from typing import Optional
+from typing import Optional, Dict
 
-# Few-shot examples - proven working strategies
+
+# Few-shot examples (same for all providers)
 FEW_SHOT_EXAMPLES = """
 EXAMPLE 1 - RSI Strategy:
 User: "Buy when RSI is below 30, sell when RSI is above 70"
@@ -54,7 +60,6 @@ def strategy(data):
     macd = ema12 - ema26
     signal = compute_ema(macd, 9)
     
-    # Crossover detection
     buy_signals = np.zeros(len(close), dtype=bool)
     sell_signals = np.zeros(len(close), dtype=bool)
     buy_signals[1:] = (macd[1:] > signal[1:]) & (macd[:-1] <= signal[:-1])
@@ -63,34 +68,7 @@ def strategy(data):
     return buy_signals, sell_signals
 ```
 
-EXAMPLE 3 - Golden Cross:
-User: "Buy when 50 EMA crosses above 200 EMA, sell on reverse"
-
-```python
-import numpy as np
-
-def compute_ema(data, period):
-    ema = np.zeros_like(data)
-    ema[0] = data[0]
-    multiplier = 2 / (period + 1)
-    for i in range(1, len(data)):
-        ema[i] = (data[i] - ema[i-1]) * multiplier + ema[i-1]
-    return ema
-
-def strategy(data):
-    close = data['close']
-    ema50 = compute_ema(close, 50)
-    ema200 = compute_ema(close, 200)
-    
-    buy_signals = np.zeros(len(close), dtype=bool)
-    sell_signals = np.zeros(len(close), dtype=bool)
-    buy_signals[1:] = (ema50[1:] > ema200[1:]) & (ema50[:-1] <= ema200[:-1])
-    sell_signals[1:] = (ema50[1:] < ema200[1:]) & (ema50[:-1] >= ema200[:-1])
-    
-    return buy_signals, sell_signals
-```
-
-EXAMPLE 4 - Bollinger Band Breakout:
+EXAMPLE 3 - Bollinger Bands:
 User: "Buy when price breaks above upper Bollinger Band, sell at middle band"
 
 ```python
@@ -108,31 +86,8 @@ def compute_bollinger(close, period=20, std_dev=2):
 def strategy(data):
     close = data['close']
     upper, middle, lower = compute_bollinger(close, 20, 2)
-    
     buy_signals = close > upper
     sell_signals = close < middle
-    
-    return buy_signals, sell_signals
-```
-
-EXAMPLE 5 - Dual Moving Average:
-User: "Buy when price crosses above 50 SMA, sell when it crosses below"
-
-```python
-import numpy as np
-
-def compute_sma(data, period):
-    return np.convolve(data, np.ones(period)/period, mode='full')[:len(data)]
-
-def strategy(data):
-    close = data['close']
-    sma50 = compute_sma(close, 50)
-    
-    buy_signals = np.zeros(len(close), dtype=bool)
-    sell_signals = np.zeros(len(close), dtype=bool)
-    buy_signals[1:] = (close[1:] > sma50[1:]) & (close[:-1] <= sma50[:-1])
-    sell_signals[1:] = (close[1:] < sma50[1:]) & (close[:-1] >= sma50[:-1])
-    
     return buy_signals, sell_signals
 ```
 """
@@ -145,7 +100,8 @@ REQUIRED STRUCTURE:
 import numpy as np
 
 def strategy(data):
-    # data is a dict with: 'open', 'high', 'low', 'close', 'volume' (all numpy arrays)
+    # data is a dict with numpy arrays: 'close', 'open', 'high', 'low', 'volume'
+    # Also has pre-computed indicators: 'rsi', 'macd', 'signal', 'ema50', 'ema200', etc.
     # Return: buy_signals (bool array), sell_signals (bool array)
     
     # YOUR CODE HERE
@@ -158,6 +114,7 @@ RULES:
 3. Handle edge cases (first N candles for indicators)
 4. Buy/sell signals must be boolean arrays
 5. No look-ahead bias (use only past/present data)
+6. You can define helper functions (compute_rsi, compute_bollinger, etc.)
 
 {FEW_SHOT_EXAMPLES}
 
@@ -170,25 +127,26 @@ THINK STEP-BY-STEP:
 """
 
 
-def generate_strategy_code(user_input: str, model=None) -> dict:
+def generate_strategy_code(user_input: str, provider: str = 'local', api_keys: Dict = None) -> dict:
     """
     Generate strategy code from natural language description.
     
+    Args:
+        user_input: Natural language strategy description
+        provider: 'local', 'deepseek', or 'claude'
+        api_keys: Dict with 'deepseek' and/or 'claude' keys
+        
     Returns:
         dict: {
             'code': str,
             'strategy_type': str,
             'indicators': list,
             'reasoning': str,
+            'provider': str,
             'error': str (if failed)
         }
     """
     try:
-        # Use configured model or fallback
-        if model is None:
-            # Try to use local reasoning first
-            model = os.environ.get('AI_MODEL', 'local')
-        
         # Build the prompt with chain-of-thought
         prompt = f"""{SYSTEM_PROMPT}
 
@@ -208,57 +166,28 @@ Respond in this JSON format:
 }}
 """
         
-        # Try local reasoning first (if available)
-        if model == 'local':
-            code = generate_local_strategy(user_input)
-            return {
-                'code': code,
-                'strategy_type': 'Custom',
-                'indicators': ['Auto-detected'],
-                'reasoning': 'Generated using local reasoning engine'
-            }
-        
-        # Use AI model (DeepSeek, OpenAI, etc.)
-        code = generate_with_ai(prompt, model)
-        
-        # Try to parse JSON response
-        try:
-            # Extract JSON from response
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', code)
-            if json_match:
-                result = json.loads(json_match.group())
-                return {
-                    'code': result.get('code', code),
-                    'strategy_type': result.get('strategy_type', 'Custom'),
-                    'indicators': result.get('indicators', []),
-                    'reasoning': result.get('reasoning', '')
-                }
-        except:
-            pass
-        
-        # Fallback: return raw code
-        return {
-            'code': code,
-            'strategy_type': 'Custom',
-            'indicators': ['Auto-detected'],
-            'reasoning': 'Generated from AI model'
-        }
+        # Route to appropriate provider
+        if provider == 'deepseek':
+            return generate_with_deepseek(prompt, api_keys)
+        elif provider == 'claude':
+            return generate_with_claude(prompt, api_keys)
+        else:  # 'local'
+            return generate_local_strategy(user_input, prompt)
         
     except Exception as e:
-        return {'error': str(e)}
+        return {'error': str(e), 'provider': provider}
 
 
-def generate_local_strategy(user_input: str) -> str:
+def generate_local_strategy(user_input: str, prompt: str = None) -> dict:
     """
-    Generate strategy code using rule-based approach (no AI).
+    Generate strategy code using rule-based approach (no API calls).
     Falls back to template-based generation.
     """
     user_input_lower = user_input.lower()
     
     # RSI Strategy
-    if 'rsi' in user_input_lower:
-        return '''import numpy as np
+    if 'rsi' in user_input_lower and ('30' in user_input_lower or '70' in user_input_lower or 'oversold' in user_input_lower or 'overbought' in user_input_lower):
+        code = '''import numpy as np
 
 def compute_rsi(close, period=14):
     delta = np.diff(close)
@@ -274,16 +203,23 @@ def strategy(data):
     close = data['close']
     rsi = compute_rsi(close, 14)
     
-    # Default: buy when oversold (<30), sell when overbought (>70)
+    # Buy when oversold (<30), sell when overbought (>70)
     buy_signals = rsi < 30
     sell_signals = rsi > 70
     
     return buy_signals, sell_signals
 '''
+        return {
+            'code': code,
+            'strategy_type': 'Mean Reversion',
+            'indicators': ['RSI'],
+            'reasoning': 'Classic RSI mean reversion strategy - buys oversold conditions, sells overbought',
+            'provider': 'local'
+        }
     
     # MACD Strategy
-    elif 'macd' in user_input_lower:
-        return '''import numpy as np
+    elif 'macd' in user_input_lower and ('cross' in user_input_lower or 'crossover' in user_input_lower):
+        code = '''import numpy as np
 
 def compute_ema(data, period):
     ema = np.zeros_like(data)
@@ -308,10 +244,17 @@ def strategy(data):
     
     return buy_signals, sell_signals
 '''
+        return {
+            'code': code,
+            'strategy_type': 'Trend Following',
+            'indicators': ['MACD', 'EMA'],
+            'reasoning': 'MACD crossover strategy - buys when MACD crosses above signal, sells on reverse',
+            'provider': 'local'
+        }
     
     # Golden Cross / EMA Crossover
-    elif 'golden' in user_input_lower or ('ema' in user_input_lower and ('50' in user_input_lower or '200' in user_input_lower)):
-        return '''import numpy as np
+    elif ('golden' in user_input_lower or ('ema' in user_input_lower and ('50' in user_input_lower or '200' in user_input_lower))):
+        code = '''import numpy as np
 
 def compute_ema(data, period):
     ema = np.zeros_like(data)
@@ -333,10 +276,17 @@ def strategy(data):
     
     return buy_signals, sell_signals
 '''
+        return {
+            'code': code,
+            'strategy_type': 'Trend Following',
+            'indicators': ['EMA', 'Golden Cross'],
+            'reasoning': 'Golden Cross strategy - buys when 50 EMA crosses above 200 EMA (bullish), sells on death cross',
+            'provider': 'local'
+        }
     
     # Bollinger Bands
-    elif 'bollinger' in user_input_lower or 'bollinger' in user_input_lower:
-        return '''import numpy as np
+    elif 'bollinger' in user_input_lower or ('band' in user_input_lower and ('break' in user_input_lower or 'touch' in user_input_lower)):
+        code = '''import numpy as np
 
 def compute_bollinger(close, period=20, std_dev=2):
     sma = np.convolve(close, np.ones(period)/period, mode='full')[:len(close)]
@@ -351,15 +301,23 @@ def strategy(data):
     close = data['close']
     upper, middle, lower = compute_bollinger(close, 20, 2)
     
+    # Buy when price breaks above upper band, sell at middle
     buy_signals = close > upper
     sell_signals = close < middle
     
     return buy_signals, sell_signals
 '''
+        return {
+            'code': code,
+            'strategy_type': 'Breakout',
+            'indicators': ['Bollinger Bands', 'SMA'],
+            'reasoning': 'Bollinger Band breakout strategy - buys breakouts above upper band, sells at mean reversion',
+            'provider': 'local'
+        }
     
     # Moving Average Crossover (default)
     else:
-        return '''import numpy as np
+        code = '''import numpy as np
 
 def compute_sma(data, period):
     return np.convolve(data, np.ones(period)/period, mode='full')[:len(data)]
@@ -376,132 +334,149 @@ def strategy(data):
     
     return buy_signals, sell_signals
 '''
-
-
-def generate_with_ai(prompt: str, model: str) -> str:
-    """Generate code using AI model (DeepSeek, OpenAI, etc.)"""
-    # This would integrate with actual AI APIs
-    # For now, fallback to local generation
-    return generate_local_strategy(prompt[:100])  # Use first 100 chars as hint
-
-
-def validate_strategy(code: str) -> dict:
-    """
-    Validate generated strategy code before execution.
-    
-    Returns:
-        dict: {
-            'valid': bool,
-            'errors': list,
-            'warnings': list
-        }
-    """
-    import ast
-    
-    errors = []
-    warnings = []
-    
-    # 1. Syntax check
-    try:
-        ast.parse(code)
-    except SyntaxError as e:
-        errors.append(f"Syntax error: {e}")
-        return {'valid': False, 'errors': errors, 'warnings': warnings}
-    
-    # 2. Structure check
-    if "def strategy(" not in code:
-        errors.append("Missing strategy() function")
-    
-    if "return" not in code:
-        errors.append("No return statement found")
-    
-    # 3. Security check - no dangerous imports
-    dangerous_imports = ['os.system', 'subprocess', 'eval(', 'exec(', '__import__']
-    for dangerous in dangerous_imports:
-        if dangerous in code:
-            errors.append(f"Security violation: {dangerous} not allowed")
-    
-    # 4. Check for required imports
-    if "import numpy" not in code and "import numpy as np" not in code:
-        warnings.append("Consider importing numpy for array operations")
-    
-    # 5. Execution test (in next step with actual data)
-    
-    return {
-        'valid': len(errors) == 0,
-        'errors': errors,
-        'warnings': warnings
-    }
-
-
-def test_strategy_execution(code: str, test_data: dict) -> dict:
-    """
-    Test strategy code on small sample data.
-    
-    Returns:
-        dict: {
-            'success': bool,
-            'error': str (if failed),
-            'buy_count': int,
-            'sell_count': int
-        }
-    """
-    try:
-        # Create namespace for execution
-        namespace = {}
-        
-        # Execute the code
-        exec(code, namespace)
-        
-        # Get the strategy function
-        if 'strategy' not in namespace:
-            return {'success': False, 'error': 'strategy() function not found'}
-        
-        strategy_func = namespace['strategy']
-        
-        # Run on test data
-        buy_signals, sell_signals = strategy_func(test_data)
-        
-        # Validate outputs
-        if len(buy_signals) != len(test_data['close']):
-            return {'success': False, 'error': 'Buy signals length mismatch'}
-        
-        if len(sell_signals) != len(test_data['close']):
-            return {'success': False, 'error': 'Sell signals length mismatch'}
-        
-        # Count signals
-        buy_count = int(np.sum(buy_signals))
-        sell_count = int(np.sum(sell_signals))
-        
-        # Warnings
-        if buy_count == 0 and sell_count == 0:
-            return {
-                'success': True,
-                'error': None,
-                'buy_count': buy_count,
-                'sell_count': sell_count,
-                'warning': 'No signals generated - check your conditions'
-            }
-        
-        if buy_count > len(test_data['close']) * 0.5:
-            return {
-                'success': True,
-                'error': None,
-                'buy_count': buy_count,
-                'sell_count': sell_count,
-                'warning': 'Very high trade frequency - may be overfitting'
-            }
-        
         return {
-            'success': True,
-            'error': None,
-            'buy_count': buy_count,
-            'sell_count': sell_count
+            'code': code,
+            'strategy_type': 'Trend Following',
+            'indicators': ['SMA', 'Moving Average Crossover'],
+            'reasoning': 'Dual moving average crossover - buys when fast MA crosses above slow MA',
+            'provider': 'local'
+        }
+
+
+def generate_with_deepseek(prompt: str, api_keys: Dict = None) -> dict:
+    """Generate code using DeepSeek API"""
+    try:
+        import requests
+        
+        api_key = api_keys.get('deepseek') if api_keys else os.environ.get('DEEPSEEK_API_KEY')
+        if not api_key:
+            return {
+                'error': 'DeepSeek API key not provided',
+                'provider': 'deepseek',
+                'fallback': 'local'
+            }
+        
+        # DeepSeek API endpoint
+        url = "https://api.deepseek.com/v1/chat/completions"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "You are a quantitative trading expert. Generate Python strategy code."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.3,
+            "max_tokens": 2000
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        result = response.json()
+        content = result['choices'][0]['message']['content']
+        
+        # Try to extract JSON from response
+        try:
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                parsed = json.loads(json_match.group())
+                return {
+                    'code': parsed.get('code', content),
+                    'strategy_type': parsed.get('strategy_type', 'Custom'),
+                    'indicators': parsed.get('indicators', []),
+                    'reasoning': parsed.get('reasoning', ''),
+                    'provider': 'deepseek'
+                }
+        except:
+            pass
+        
+        # Fallback: return raw code
+        return {
+            'code': content,
+            'strategy_type': 'Custom',
+            'indicators': [],
+            'reasoning': 'Generated by DeepSeek',
+            'provider': 'deepseek'
         }
         
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {
+            'error': f'DeepSeek API error: {str(e)}',
+            'provider': 'deepseek',
+            'fallback': 'local'
+        }
 
 
-# Import numpy for test execution
-import numpy as np
+def generate_with_claude(prompt: str, api_keys: Dict = None) -> dict:
+    """Generate code using Claude (Anthropic) API"""
+    try:
+        import requests
+        
+        api_key = api_keys.get('claude') if api_keys else os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            return {
+                'error': 'Claude API key not provided',
+                'provider': 'claude',
+                'fallback': 'local'
+            }
+        
+        # Anthropic API endpoint
+        url = "https://api.anthropic.com/v1/messages"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01"
+        }
+        
+        payload = {
+            "model": "claude-3-sonnet-20240229",
+            "max_tokens": 2000,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        result = response.json()
+        content = result['content'][0]['text']
+        
+        # Try to extract JSON from response
+        try:
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                parsed = json.loads(json_match.group())
+                return {
+                    'code': parsed.get('code', content),
+                    'strategy_type': parsed.get('strategy_type', 'Custom'),
+                    'indicators': parsed.get('indicators', []),
+                    'reasoning': parsed.get('reasoning', ''),
+                    'provider': 'claude'
+                }
+        except:
+            pass
+        
+        # Fallback: return raw code
+        return {
+            'code': content,
+            'strategy_type': 'Custom',
+            'indicators': [],
+            'reasoning': 'Generated by Claude',
+            'provider': 'claude'
+        }
+        
+    except Exception as e:
+        return {
+            'error': f'Claude API error: {str(e)}',
+            'provider': 'claude',
+            'fallback': 'local'
+        }
