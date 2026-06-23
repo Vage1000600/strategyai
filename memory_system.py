@@ -24,8 +24,12 @@ class StrategyMemory:
         self.memory_file = os.path.join(memory_dir, "strategy-memory.json")
         self.performance_file = os.path.join(memory_dir, "performance-state.json")
         
-        # Ensure directory exists
-        os.makedirs(memory_dir, exist_ok=True)
+        # Ensure directory exists (skip on Vercel/read-only filesystem)
+        try:
+            os.makedirs(memory_dir, exist_ok=True)
+        except (OSError, IOError, PermissionError):
+            # Read-only filesystem - will work in-memory only
+            pass
         
         # Load existing memory
         self.memory = self._load_memory()
@@ -239,14 +243,30 @@ class StrategyMemory:
             self.memory['lessons'] = self.memory['lessons'][-50:]
     
     def _save_memory(self):
-        """Save memory to disk"""
-        with open(self.memory_file, 'w') as f:
-            json.dump(self.memory, f, indent=2)
+        """Save memory to disk (gracefully handles read-only filesystem)"""
+        try:
+            # Check if running on Vercel (read-only filesystem)
+            if os.environ.get('VERCEL'):
+                return  # Skip file writes on Vercel
+            
+            with open(self.memory_file, 'w') as f:
+                json.dump(self.memory, f, indent=2)
+        except (OSError, IOError, PermissionError):
+            # Read-only filesystem - skip silently
+            pass
     
     def _save_performance(self):
-        """Save performance to disk"""
-        with open(self.performance_file, 'w') as f:
-            json.dump(self.performance, f, indent=2)
+        """Save performance to disk (gracefully handles read-only filesystem)"""
+        try:
+            # Check if running on Vercel (read-only filesystem)
+            if os.environ.get('VERCEL'):
+                return  # Skip file writes on Vercel
+            
+            with open(self.performance_file, 'w') as f:
+                json.dump(self.performance, f, indent=2)
+        except (OSError, IOError, PermissionError):
+            # Read-only filesystem - skip silently
+            pass
     
     def get_similar_strategies(self, strategy_input: str, limit: int = 5) -> List[Dict]:
         """Find similar strategies from memory"""
