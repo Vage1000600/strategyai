@@ -567,11 +567,16 @@ def get_html_page():
 
                             <div class="mb-5">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">⏱️ Timeframe</label>
-                                <select id="timeframe" name="timeframe" class="input-field">
+                                <select id="timeframe" name="timeframe" class="input-field" onchange="toggleCustomTimeframe()">
                                     <option value="1h">1 Hour</option>
                                     <option value="4h">4 Hours</option>
                                     <option value="1d">1 Day</option>
+                                    <option value="custom">Custom...</option>
                                 </select>
+                                <input type="text" id="timeframe_custom" name="timeframe_custom" class="input-field mt-2 hidden" 
+                                    placeholder="Enter timeframe (e.g., 5m, 15m, 2h, 3d, 1w)" 
+                                    pattern="[0-9]+[mhdwM]" title="Format: number + m/h/d/w/M (e.g., 5m, 15m, 2h, 3d, 1w)">
+                                <p class="text-xs text-slate-500 mt-2">Supported: m (minute), h (hour), d (day), w (week), M (month)</p>
                             </div>
 
                             <div class="mb-5">
@@ -766,6 +771,27 @@ def get_html_page():
             document.getElementById('strategy_input').value = text;
         }
         
+        function toggleCustomTimeframe() {
+            const select = document.getElementById('timeframe');
+            const customInput = document.getElementById('timeframe_custom');
+            if (select.value === 'custom') {
+                customInput.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customInput.classList.add('hidden');
+                customInput.value = '';
+            }
+        }
+        
+        function getTimeframeValue() {
+            const select = document.getElementById('timeframe');
+            const customInput = document.getElementById('timeframe_custom');
+            if (select.value === 'custom' && customInput.value.trim()) {
+                return customInput.value.trim();
+            }
+            return select.value;
+        }
+        
         async function generateCode() {
             document.getElementById('loading').classList.remove('hidden');
             document.getElementById('results').classList.add('hidden');
@@ -780,6 +806,7 @@ def get_html_page():
             const claudeKey = document.getElementById('claude_api_key').value || '';
             formData.append('deepseek_api_key', deepseekKey ? obfuscateApiKey(deepseekKey) : '');
             formData.append('claude_api_key', claudeKey ? obfuscateApiKey(claudeKey) : '');
+            formData.append('timeframe', getTimeframeValue());
             
             try {
                 const response = await fetch('/backtest/generate', { method: 'POST', body: formData });
@@ -832,7 +859,7 @@ def get_html_page():
             const formData = new FormData();
             formData.append('strategy_input', document.getElementById('strategy_input').value);
             formData.append('symbol', document.getElementById('symbol').value);
-            formData.append('timeframe', document.getElementById('timeframe').value);
+            formData.append('timeframe', getTimeframeValue());
             formData.append('generated_code', currentCode);
             
             // Add API credentials if provided
