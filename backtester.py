@@ -267,6 +267,12 @@ class Backtester:
             max_consecutive_wins = self._max_consecutive(trades, True)
             max_consecutive_losses = self._max_consecutive(trades, False)
             
+            # Ensure we always return valid data
+            if not equity_curve:
+                equity_curve = [self.initial_capital]
+            if not drawdown_curve:
+                drawdown_curve = [0]
+            
             return {
                 'success': True,
                 'metrics': {
@@ -284,9 +290,9 @@ class Backtester:
                     'max_consecutive_losses': max_consecutive_losses,
                 },
                 'trades': trades[:50],  # Limit to first 50 for display
-                'equity_curve': equity_curve,
-                'drawdown_curve': drawdown_curve,
-                'initial_capital': self.initial_capital
+                'equity_curve': [float(x) for x in equity_curve],
+                'drawdown_curve': [float(x) for x in drawdown_curve],
+                'initial_capital': float(self.initial_capital)
             }
             
         except Exception as e:
