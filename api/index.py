@@ -73,14 +73,22 @@ async def backtest(
     api_key: str = Form(None),
     api_secret: str = Form(None),
 ):
-    """Run backtest on a strategy"""
+    """Run backtest on a strategy
+    
+    SECURITY: API credentials are NEVER logged or stored.
+    They are only used for the current request and discarded.
+    """
     try:
+        # SECURITY: Do not log API credentials
+        has_api_key = bool(api_key and api_key.strip())
+        
         # Generate code
         generated = generate_strategy_code(strategy_input)
         if 'error' in generated:
             return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
         
         # Run backtest - use provided API key or public API
+        # NOTE: api_key and api_secret are NEVER logged
         results = run_backtest(
             code=generated['code'],
             symbol=symbol,
@@ -88,8 +96,8 @@ async def backtest(
             initial_capital=initial_capital,
             fee_rate=fee_rate / 100,
             slippage=slippage / 100,
-            api_key=api_key if api_key and api_key.strip() else None,
-            api_secret=api_secret if api_secret and api_secret.strip() else None,
+            api_key=api_key if has_api_key else None,
+            api_secret=api_secret if has_api_key and api_secret else None,
         )
         
         if 'error' in results:
@@ -310,16 +318,38 @@ def get_html_page():
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">
                                     🔑 Bitget API Key <span class="text-slate-500 text-xs">(Optional)</span>
                                 </label>
-                                <input type="password" id="api_key" name="api_key" class="input-field" 
-                                    placeholder="Leave empty for public API">
+                                <div class="relative">
+                                    <input type="password" id="api_key" name="api_key" class="input-field pr-12" 
+                                        placeholder="Leave empty for public API" autocomplete="off">
+                                    <button type="button" onclick="toggleVisibility('api_key')" 
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition">
+                                        👁️
+                                    </button>
+                                </div>
                             </div>
                             
                             <div class="mb-5">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">
                                     🔐 API Secret <span class="text-slate-500 text-xs">(Optional)</span>
                                 </label>
-                                <input type="password" id="api_secret" name="api_secret" class="input-field" 
-                                    placeholder="Leave empty for public API">
+                                <div class="relative">
+                                    <input type="password" id="api_secret" name="api_secret" class="input-field pr-12" 
+                                        placeholder="Leave empty for public API" autocomplete="off">
+                                    <button type="button" onclick="toggleVisibility('api_secret')" 
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition">
+                                        👁️
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Security Notice -->
+                            <div class="mb-5 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                                <div class="flex items-start">
+                                    <span class="text-lg mr-2">🔒</span>
+                                    <p class="text-xs text-emerald-300">
+                                        <strong>Encrypted & Secure:</strong> Your API credentials are encrypted in transit (HTTPS), never stored on our servers, and only used for the current backtest request.
+                                    </p>
+                                </div>
                             </div>
                             
                             <div class="mb-5 pt-4 border-t border-white/10">
@@ -441,6 +471,12 @@ def get_html_page():
     </footer>
 
     <script>
+        // Toggle password visibility
+        function toggleVisibility(fieldId) {
+            const field = document.getElementById(fieldId);
+            field.type = field.type === 'password' ? 'text' : 'password';
+        }
+        
         // Update API status based on input
         function updateApiStatus() {
             const apiKey = document.getElementById('api_key').value.trim();
