@@ -8,12 +8,12 @@ import os
 from typing import Dict, List
 
 # ============================================================================
-# GROQ API KEY (Embedded - Free Tier for ALL Users)
+# GROQ API KEY (Set in Vercel Environment Variables)
 # Get yours at: https://console.groq.com/keys
 # Free tier: 30 req/min, 14,400/day
 # This key is used for "Local" mode - users don't need their own key
 # ============================================================================
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY', 'gsk_your_key_here')  # ← REPLACE WITH YOUR KEY
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')  # Set in Vercel dashboard
 
 
 # ============================================================================
