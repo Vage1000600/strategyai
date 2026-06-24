@@ -711,8 +711,44 @@ def validate_and_fix(code: str) -> dict:
     fixed_code = code
     fixes_applied = []
     
+    # CRITICAL FIX: Remove any code outside of function definitions
+    # AI sometimes generates test code at the bottom which causes "name 'data' is not defined"
+    lines = code.split('\n')
+    cleaned_lines = []
+    in_function = False
+    indent_count = 0
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Skip empty lines and comments at module level
+        if not in_function and (not stripped or stripped.startswith('#')):
+            cleaned_lines.append(line)
+            continue
+        
+        # Check if this is a function definition
+        if stripped.startswith('def '):
+            in_function = True
+            indent_count = len(line) - len(line.lstrip())
+            cleaned_lines.append(line)
+        # Check if we're exiting the function (back to module level)
+        elif in_function and stripped and not line.startswith(' ' * (indent_count + 1)) and not line.startswith('\t'):
+            if not stripped.startswith('#'):
+                in_function = False
+            # Only keep if it's another function def or import
+            if stripped.startswith('def ') or stripped.startswith('import ') or stripped.startswith('from '):
+                cleaned_lines.append(line)
+            # Skip test code, example usage, etc.
+        elif in_function:
+            cleaned_lines.append(line)
+        # Skip module-level code that's not a function/import
+    
+    fixed_code = '\n'.join(cleaned_lines)
+    if len(cleaned_lines) < len(lines):
+        fixes_applied.append("Removed test/example code outside functions")
+    
     # Fix 1: Add epsilon to unprotected divisions in RSI calculations
-    if 'rs = ' in code and '1e-10' not in code:
+    if 'rs = ' in fixed_code and '1e-10' not in fixed_code:
         fixed_code = re.sub(
             r'rs = ([^\n]+)/([^\n]+)',
             r'rs = \1 / (\2 + 1e-10)',
@@ -721,7 +757,7 @@ def validate_and_fix(code: str) -> dict:
         fixes_applied.append("Added epsilon to RSI division")
     
     # Fix 2: Ensure boolean dtype for signals
-    if 'dtype=bool' not in code and 'dtype=np.bool' not in code:
+    if 'dtype=bool' not in fixed_code and 'dtype=np.bool' not in fixed_code:
         fixed_code = re.sub(
             r'np\.zeros\(len\(([^)]+)\)\)',
             r'np.zeros(len(\1), dtype=bool)',

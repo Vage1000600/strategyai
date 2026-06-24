@@ -50,16 +50,33 @@ class Backtester:
             logger.debug(f"📝 Strategy code length: {len(strategy_code)} chars")
             print(f"[BACKTEST] Starting backtest with {len(df)} candles, initial_capital={self.initial_capital}")
             
-            # SECURITY: Create sandboxed namespace
+            # SECURITY: Create sandboxed namespace and execute strategy code
             safe_builtins = self._create_safe_builtins()
             local_ns = {'__builtins__': safe_builtins}
-            exec(strategy_code, local_ns, local_ns)
+            
+            logger.debug("🔧 Executing strategy code in sandbox...")
+            try:
+                exec(strategy_code, local_ns, local_ns)
+                logger.debug("✅ Strategy code executed successfully")
+            except NameError as ne:
+                logger.error(f"❌ NameError during exec: {ne}")
+                logger.error(f"This usually means code references undefined variables at module level")
+                logger.error(f"Strategy code should ONLY contain function definitions (def), no top-level code")
+                return {"error": f"Strategy code error: {str(ne)}. Make sure code only contains function definitions, no test code or example usage."}
+            except Exception as ex:
+                logger.error(f"❌ Error during exec: {ex}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return {"error": f"Strategy code execution failed: {str(ex)}"}
+            
             strategy_func = local_ns.get('strategy')
             
             if not strategy_func:
                 logger.error("❌ BACKTEST ERROR: No strategy function found")
                 print("[BACKTEST] ERROR: No strategy function found")
                 return {"error": "Strategy function not found. Add 'def strategy(data):'"}
+            
+            logger.debug(f"✅ Strategy function found: {strategy_func}")
             
             # PRE-COMPUTE ALL SIGNALS (run strategy once on full dataset)
             logger.debug(f"📡 PRE-COMPUTING SIGNALS on full dataset...")
