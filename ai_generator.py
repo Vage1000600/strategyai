@@ -683,9 +683,7 @@ def validate_strategy(code: str) -> dict:
     if 'ema' in code.lower() and '2.0 / (' not in code and '2 / (' not in code:
         warnings.append("Verify EMA multiplier: should be 2.0 / (period + 1)")
     
-    # Check for numpy import
-    if 'import numpy' not in code and 'import np' not in code:
-        errors.append("Missing numpy import (required)")
+    # Note: numpy import check removed - we auto-add it in validate_and_fix()
     
     # 5. Basic execution test (lightweight - just check strategy exists)
     try:
@@ -721,7 +719,12 @@ def validate_and_fix(code: str) -> dict:
     for line in lines:
         stripped = line.strip()
         
-        # Skip empty lines and comments at module level
+        # ALWAYS keep imports at module level
+        if stripped.startswith('import ') or stripped.startswith('from '):
+            cleaned_lines.append(line)
+            continue
+        
+        # Skip empty lines and comments at module level (before any function)
         if not in_function and (not stripped or stripped.startswith('#')):
             cleaned_lines.append(line)
             continue
@@ -735,8 +738,8 @@ def validate_and_fix(code: str) -> dict:
         elif in_function and stripped and not line.startswith(' ' * (indent_count + 1)) and not line.startswith('\t'):
             if not stripped.startswith('#'):
                 in_function = False
-            # Only keep if it's another function def or import
-            if stripped.startswith('def ') or stripped.startswith('import ') or stripped.startswith('from '):
+            # Only keep if it's another function def (imports already handled above)
+            if stripped.startswith('def '):
                 cleaned_lines.append(line)
             # Skip test code, example usage, etc.
         elif in_function:
@@ -746,6 +749,11 @@ def validate_and_fix(code: str) -> dict:
     fixed_code = '\n'.join(cleaned_lines)
     if len(cleaned_lines) < len(lines):
         fixes_applied.append("Removed test/example code outside functions")
+    
+    # CRITICAL: Ensure numpy import is present
+    if 'import numpy' not in fixed_code and 'import np' not in fixed_code:
+        fixed_code = 'import numpy as np\n\n' + fixed_code
+        fixes_applied.append("Added missing numpy import")
     
     # Fix 1: Add epsilon to unprotected divisions in RSI calculations
     if 'rs = ' in fixed_code and '1e-10' not in fixed_code:
