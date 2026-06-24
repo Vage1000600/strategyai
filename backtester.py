@@ -80,23 +80,42 @@ class Backtester:
             
             # PRE-COMPUTE ALL SIGNALS (run strategy once on full dataset)
             logger.debug(f"📡 PRE-COMPUTING SIGNALS on full dataset...")
-            data_full = self._prepare_data(df, len(df) - 1)
-            logger.debug(f"📦 Data prepared: keys={list(data_full.keys())}, close_len={len(data_full['close'])}")
             
             try:
+                # Prepare data dictionary for strategy
+                data_full = self._prepare_data(df, len(df) - 1)
+                logger.debug(f"📦 Data prepared: keys={list(data_full.keys())}, close_len={len(data_full['close'])}")
+                
                 # Verify strategy function is callable
                 if not callable(strategy_func):
                     logger.error("❌ strategy_func is not callable")
                     return {"error": "Strategy function is not callable"}
                 
-                logger.debug(f"🔧 Calling strategy_func with data_full (type={type(data_full)})")
+    logger.debug(f"🔧 Calling strategy_func with data_full (type={type(data_full)})")
+                logger.debug(f"   data_full keys: {list(data_full.keys())}")
+                logger.debug(f"   strategy_func source (first 500 chars): {str(strategy_func)[:500]}")
+                
+                # Call strategy function
                 buy_signals_full, sell_signals_full = strategy_func(data_full)
                 logger.debug(f"✅ SIGNALS COMPUTED: {np.sum(buy_signals_full)} buy signals, {np.sum(sell_signals_full)} sell signals")
                 print(f"[BACKTEST] Found {np.sum(buy_signals_full)} buy signals, {np.sum(sell_signals_full)} sell signals")
+                
+            except NameError as ne:
+                logger.error(f"❌ NameError in strategy: {ne}")
+                logger.error(f"   This means strategy code references a variable that doesn't exist")
+                logger.error(f"   Common causes:")
+                logger.error(f"   1. Typo in variable name (e.g., 'dat' instead of 'data')")
+                logger.error(f"   2. Using 'data' outside of function definition")
+                logger.error(f"   3. Missing import or helper function")
+                import traceback
+                logger.error(f"   Traceback: {traceback.format_exc()}")
+                return {"error": f"Strategy code error: {str(ne)}. Check for typos or code outside function definitions."}
             except TypeError as te:
                 logger.error(f"❌ TypeError calling strategy: {te}")
-                logger.error(f"strategy_func type: {type(strategy_func)}")
-                logger.error(f"data_full type: {type(data_full)}")
+                logger.error(f"   strategy_func type: {type(strategy_func)}")
+                logger.error(f"   data_full type: {type(data_full)}")
+                import traceback
+                logger.error(f"   Traceback: {traceback.format_exc()}")
                 return {"error": f"Strategy call failed: {str(te)}"}
             except Exception as e:
                 import traceback

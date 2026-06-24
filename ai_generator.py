@@ -709,46 +709,48 @@ def validate_and_fix(code: str) -> dict:
     fixed_code = code
     fixes_applied = []
     
-    # CRITICAL FIX: Remove any code outside of function definitions
-    # AI sometimes generates test code at the bottom which causes "name 'data' is not defined"
+    # CRITICAL FIX: Keep ONLY imports and function definitions
+    # Remove ALL other code (test code, examples, comments at module level, etc.)
     lines = code.split('\n')
     cleaned_lines = []
     in_function = False
-    indent_count = 0
+    func_indent = 0
     
     for line in lines:
         stripped = line.strip()
         
-        # ALWAYS keep imports at module level
+        # 1. ALWAYS keep import statements
         if stripped.startswith('import ') or stripped.startswith('from '):
             cleaned_lines.append(line)
             continue
         
-        # Skip empty lines and comments at module level (before any function)
-        if not in_function and (not stripped or stripped.startswith('#')):
-            cleaned_lines.append(line)
+        # 2. If we're inside a function, keep all lines
+        if in_function:
+            # Check if we've exited the function (non-indented, non-empty line)
+            if stripped and not line.startswith(' ') and not line.startswith('\t'):
+                in_function = False
+                # If this is another function def, keep it
+                if stripped.startswith('def '):
+                    cleaned_lines.append(line)
+                    in_function = True
+                    func_indent = len(line) - len(line.lstrip())
+            else:
+                cleaned_lines.append(line)
             continue
         
-        # Check if this is a function definition
+        # 3. At module level: only keep function definitions
         if stripped.startswith('def '):
+            cleaned_lines.append(line)
             in_function = True
-            indent_count = len(line) - len(line.lstrip())
-            cleaned_lines.append(line)
-        # Check if we're exiting the function (back to module level)
-        elif in_function and stripped and not line.startswith(' ' * (indent_count + 1)) and not line.startswith('\t'):
-            if not stripped.startswith('#'):
-                in_function = False
-            # Only keep if it's another function def (imports already handled above)
-            if stripped.startswith('def '):
-                cleaned_lines.append(line)
-            # Skip test code, example usage, etc.
-        elif in_function:
-            cleaned_lines.append(line)
-        # Skip module-level code that's not a function/import
+            func_indent = len(line) - len(line.lstrip())
+            continue
+        
+        # 4. Skip everything else at module level (test code, print statements, etc.)
+        # But track if we removed something
+        if stripped:
+            fixes_applied.append(f"Removed module-level code: {stripped[:50]}...")
     
     fixed_code = '\n'.join(cleaned_lines)
-    if len(cleaned_lines) < len(lines):
-        fixes_applied.append("Removed test/example code outside functions")
     
     # CRITICAL: Ensure numpy import is present
     if 'import numpy' not in fixed_code and 'import np' not in fixed_code:
