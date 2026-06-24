@@ -750,12 +750,49 @@ def validate_and_fix(code: str) -> dict:
         if stripped:
             fixes_applied.append(f"Removed module-level code: {stripped[:50]}...")
     
-    fixed_code = '\n'.join(cleaned_lines)
+    # FINAL PASS: Only keep from first import to last function definition
+    # This removes ANY trailing code after functions
+    final_lines = []
+    found_import = False
+    last_def_line = -1
+    
+    for i, line in enumerate(cleaned_lines):
+        if line.strip().startswith('import ') or line.strip().startswith('from '):
+            found_import = True
+        if line.strip().startswith('def '):
+            last_def_line = i
+    
+    if found_import and last_def_line >= 0:
+        # Find the end of the last function (look for next non-indented line after def)
+        in_last_func = False
+        for i, line in enumerate(cleaned_lines):
+            if i <= last_def_line:
+                final_lines.append(line)
+            elif i > last_def_line and in_last_func:
+                # Check if we're still in the function
+                if line.strip() and not line.startswith(' ') and not line.startswith('\t'):
+                    in_last_func = False
+                else:
+                    final_lines.append(line)
+            elif cleaned_lines[i].strip().startswith('def '):
+                final_lines.append(line)
+                in_last_func = True
+    else:
+        final_lines = cleaned_lines
+    
+    fixed_code = '\n'.join(final_lines)
     
     # CRITICAL: Ensure numpy import is present
     if 'import numpy' not in fixed_code and 'import np' not in fixed_code:
         fixed_code = 'import numpy as np\n\n' + fixed_code
         fixes_applied.append("Added missing numpy import")
+    
+    # Quick syntax check
+    try:
+        import ast
+        ast.parse(fixed_code)
+    except SyntaxError as se:
+        fixes_applied.append(f"Warning: Code has syntax error: {se}")
     
     # Fix 1: Add epsilon to unprotected divisions in RSI calculations
     if 'rs = ' in fixed_code and '1e-10' not in fixed_code:
