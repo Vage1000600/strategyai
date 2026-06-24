@@ -8,11 +8,12 @@ import os
 from typing import Dict, List
 
 # ============================================================================
-# GROQ API KEY (Embedded - Free Tier)
+# GROQ API KEY (Embedded - Free Tier for ALL Users)
 # Get yours at: https://console.groq.com/keys
 # Free tier: 30 req/min, 14,400/day
+# This key is used for "Local" mode - users don't need their own key
 # ============================================================================
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY', 'gsk_your_key_here')  # ← Replace with your key
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', 'gsk_your_key_here')  # ← REPLACE WITH YOUR KEY
 
 
 # ============================================================================
@@ -425,13 +426,13 @@ def generate_with_claude(prompt: str, api_keys: Dict = None) -> dict:
 # MAIN GENERATION FUNCTION
 # ============================================================================
 
-def generate_strategy_code(user_input: str, provider: str = 'groq', api_keys: Dict = None) -> dict:
+def generate_strategy_code(user_input: str, provider: str = 'local', api_keys: Dict = None) -> dict:
     """
     Generate strategy code from natural language.
     
     Args:
         user_input: Strategy description
-        provider: 'groq' (default), 'local', 'ollama', 'deepseek', or 'claude'
+        provider: 'local' (uses embedded Groq), 'groq', 'ollama', 'deepseek', or 'claude'
         api_keys: Dict with API keys
     
     Returns:
@@ -460,26 +461,18 @@ STRATEGY: {user_input}
 
 Respond with code only."""
 
-        # Route to provider (Groq is default)
-        if provider == 'groq':
-            return generate_with_groq(prompt, api_keys.get('groq') if api_keys else None)
+        # Route to provider ('local' now uses embedded Groq key)
+        if provider == 'local' or provider == 'groq':
+            # Use embedded Groq key (users don't need their own)
+            return generate_with_groq(prompt, api_key=GROQ_API_KEY)
         elif provider == 'ollama':
             return generate_with_ollama(prompt)
         elif provider == 'deepseek':
             return generate_with_deepseek(prompt, api_keys)
         elif provider == 'claude':
             return generate_with_claude(prompt, api_keys)
-        else:  # 'local' fallback
-            template_name = detect_template(user_input)
-            code = TEMPLATES.get(template_name, TEMPLATES['default'])
-            
-            return {
-                'code': code,
-                'strategy_type': TEMPLATES.get(template_name, 'SMA Crossover'),
-                'indicators': ['Auto-detected'],
-                'reasoning': f'Using {template_name} template',
-                'provider': 'local'
-            }
+        else:  # Fallback to Groq
+            return generate_with_groq(prompt, api_key=GROQ_API_KEY)
             
     except Exception as e:
         return {'error': str(e), 'provider': provider}
