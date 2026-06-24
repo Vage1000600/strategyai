@@ -68,7 +68,8 @@ async def root():
 @app.post("/backtest/generate")
 async def generate_strategy(
     strategy_input: str = Form(...),
-    ai_provider: str = Form('local'),
+    ai_provider: str = Form('groq'),  # Changed default to groq
+    groq_api_key: str = Form(None),
     deepseek_api_key: str = Form(None),
     claude_api_key: str = Form(None),
 ):
@@ -95,6 +96,8 @@ async def generate_strategy(
         
         # Build API keys dict
         api_keys = {}
+        if groq_api_key:
+            api_keys['groq'] = deobfuscate_key(groq_api_key)
         if deepseek_api_key:
             api_keys['deepseek'] = deobfuscate_key(deepseek_api_key)
         if claude_api_key:
@@ -570,11 +573,25 @@ def get_html_page():
                             <div class="mb-5 pt-4 border-t border-white/10">
                                 <label class="block text-sm font-semibold text-slate-300 mb-2">🤖 AI Provider</label>
                                 <select id="ai_provider" name="ai_provider" class="input-field">
-                                    <option value="local">Local Templates (Free, Instant)</option>
+                                    <option value="groq" selected>🚀 Groq (Free, Fast, 70B Model)</option>
+                                    <option value="local">Local Templates (Offline)</option>
                                     <option value="deepseek">DeepSeek (Advanced, ~$0.01)</option>
                                     <option value="claude">Claude (Best Quality, ~$0.03)</option>
                                 </select>
-                                <p class="text-xs text-slate-500 mt-2">Local uses proven templates. DeepSeek/Claude for complex custom strategies.</p>
+                                <p class="text-xs text-slate-500 mt-2">Groq is free & embedded. Add your own key for DeepSeek/Claude.</p>
+                            </div>
+                            
+                            <!-- Groq API Key (Encrypted) -->
+                            <div class="mb-5">
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">
+                                    🔑 Groq API Key <span class="text-slate-500 text-xs">(Optional, Embedded Key Used by Default 🔒)</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="password" id="groq_api_key" name="groq_api_key" class="input-field pr-10" 
+                                        placeholder="gsk-... (leave empty to use embedded key)" autocomplete="off">
+                                    <span id="groq-encrypt-status" class="absolute right-3 top-3 text-xs text-emerald-400 hidden">🔒</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-2">Get free key at https://console.groq.com/keys (30 req/min, 14,400/day)</p>
                             </div>
                             
                             <!-- DeepSeek API Key (Encrypted) -->
@@ -851,8 +868,10 @@ def get_html_page():
             formData.append('strategy_input', document.getElementById('strategy_input').value);
             formData.append('ai_provider', document.getElementById('ai_provider').value);
             // Encrypt API keys before sending
+            const groqKey = document.getElementById('groq_api_key').value || '';
             const deepseekKey = document.getElementById('deepseek_api_key').value || '';
             const claudeKey = document.getElementById('claude_api_key').value || '';
+            formData.append('groq_api_key', groqKey ? obfuscateApiKey(groqKey) : '');
             formData.append('deepseek_api_key', deepseekKey ? obfuscateApiKey(deepseekKey) : '');
             formData.append('claude_api_key', claudeKey ? obfuscateApiKey(claudeKey) : '');
             formData.append('timeframe', getTimeframeValue());

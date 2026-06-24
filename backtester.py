@@ -8,6 +8,11 @@ import numpy as np
 from typing import Dict, Optional, Tuple
 from datetime import datetime
 import ccxt
+import logging
+
+# Debug logging setup
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class Backtester:
@@ -41,6 +46,8 @@ class Backtester:
             Dict with backtest results
         """
         try:
+            logger.debug(f"🔍 BACKTEST STARTED: {len(df)} candles, initial_capital={self.initial_capital}")
+            logger.debug(f"📝 Strategy code length: {len(strategy_code)} chars")
             print(f"[BACKTEST] Starting backtest with {len(df)} candles, initial_capital={self.initial_capital}")
             
             # SECURITY: Create sandboxed namespace
@@ -50,6 +57,7 @@ class Backtester:
             strategy_func = local_ns.get('strategy')
             
             if not strategy_func:
+                logger.error("❌ BACKTEST ERROR: No strategy function found")
                 print("[BACKTEST] ERROR: No strategy function found")
                 return {"error": "Strategy function not found. Add 'def strategy(data):'"}
             
@@ -101,7 +109,10 @@ class Backtester:
                         buy_signal = buy_signal[-1]  # Get last value
                     if hasattr(sell_signal, '__len__') and len(sell_signal) > 0:
                         sell_signal = sell_signal[-1]
+                    
+                    logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
                 except Exception as e:
+                    logger.warning(f"⚠️ Strategy failed on candle {i}: {e}")
                     continue  # Skip this candle if strategy fails
                 
                 # Check for existing position exit
@@ -185,6 +196,7 @@ class Backtester:
                 
                 # Check for new entry (only if no position)
                 if position == 0 and buy_signal:
+                    logger.debug(f"💰 BUY SIGNAL at {current_price} (candle {i})")
                     # Calculate position size
                     position_value = capital * position_size_pct
                     position_qty = position_value / current_price
@@ -279,6 +291,8 @@ class Backtester:
             if not drawdown_curve:
                 drawdown_curve = [0]
             
+            logger.info(f"✅ BACKTEST COMPLETE: final_capital={final_capital}, total_trades={total_trades}, return={return_pct:.2f}%")
+            logger.debug(f"📈 Equity curve length: {len(equity_curve)}, Trades: {len(trades)}")
             print(f"[BACKTEST] Results: final_capital={final_capital}, total_trades={total_trades}, equity_curve_len={len(equity_curve)}")
             
             return {
@@ -460,9 +474,11 @@ class BitgetDataFetcher:
     def fetch(self, symbol: str, timeframe: str, limit: int = 1000) -> pd.DataFrame:
         """Fetch OHLCV data and calculate indicators"""
         try:
+            logger.debug(f"📡 FETCHING DATA: {symbol} {timeframe} (limit={limit})")
             print(f"[FETCH] Fetching {symbol} {timeframe} data...")
             # Fetch candles
             bars = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+            logger.debug(f"📦 RAW DATA: {len(bars)} bars received")
             print(f"[FETCH] Got {len(bars)} bars")
             
             if len(bars) == 0:
@@ -494,6 +510,8 @@ class BitgetDataFetcher:
             # ATR
             df['atr'] = self._calculate_atr(df, 14)
             
+            logger.debug(f"✅ DATA READY: {len(df)} rows, columns: {list(df.columns)}")
+            logger.debug(f"📊 First row: open={df['open'].iloc[0]}, close={df['close'].iloc[0]}")
             print(f"[FETCH] Success: {len(df)} rows, columns: {list(df.columns)}")
             return df
             
