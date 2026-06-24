@@ -110,8 +110,13 @@ async def generate_strategy(
             else:
                 return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
         
-        # Validate the generated code
-        validation = validate_strategy(generated['code'])
+        # Enhanced validation with auto-fix
+        validation = validate_and_fix(generated['code'])
+        
+        # If auto-fix was applied, use the fixed code
+        if validation.get('fixes_applied') and len(validation['fixes_applied']) > 0:
+            generated['code'] = validation['code']
+            generated['reasoning'] = generated.get('reasoning', '') + f" [Auto-fixed: {', '.join(validation['fixes_applied'])}]"
         
         return JSONResponse({
             'success': True,
