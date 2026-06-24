@@ -14,7 +14,7 @@ from datetime import datetime
 # Add parent directory to path for backend imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ai_generator import generate_strategy_code, validate_strategy
+from ai_generator import generate_strategy_code, validate_strategy, validate_and_fix
 from backtester import run_backtest
 from memory_system import store_backtest, get_insights
 from strategy_scorer import score_strategy
