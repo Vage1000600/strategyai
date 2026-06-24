@@ -64,12 +64,27 @@ class Backtester:
             # PRE-COMPUTE ALL SIGNALS (run strategy once on full dataset)
             logger.debug(f"📡 PRE-COMPUTING SIGNALS on full dataset...")
             data_full = self._prepare_data(df, len(df) - 1)
+            logger.debug(f"📦 Data prepared: keys={list(data_full.keys())}, close_len={len(data_full['close'])}")
+            
             try:
+                # Verify strategy function is callable
+                if not callable(strategy_func):
+                    logger.error("❌ strategy_func is not callable")
+                    return {"error": "Strategy function is not callable"}
+                
+                logger.debug(f"🔧 Calling strategy_func with data_full (type={type(data_full)})")
                 buy_signals_full, sell_signals_full = strategy_func(data_full)
                 logger.debug(f"✅ SIGNALS COMPUTED: {np.sum(buy_signals_full)} buy signals, {np.sum(sell_signals_full)} sell signals")
                 print(f"[BACKTEST] Found {np.sum(buy_signals_full)} buy signals, {np.sum(sell_signals_full)} sell signals")
+            except TypeError as te:
+                logger.error(f"❌ TypeError calling strategy: {te}")
+                logger.error(f"strategy_func type: {type(strategy_func)}")
+                logger.error(f"data_full type: {type(data_full)}")
+                return {"error": f"Strategy call failed: {str(te)}"}
             except Exception as e:
+                import traceback
                 logger.error(f"❌ SIGNAL GENERATION FAILED: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 return {"error": f"Strategy execution failed: {str(e)}"}
             
             print("[BACKTEST] Strategy function loaded successfully")
