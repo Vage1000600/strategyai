@@ -61,6 +61,17 @@ class Backtester:
                 print("[BACKTEST] ERROR: No strategy function found")
                 return {"error": "Strategy function not found. Add 'def strategy(data):'"}
             
+            # PRE-COMPUTE ALL SIGNALS (run strategy once on full dataset)
+            logger.debug(f"📡 PRE-COMPUTING SIGNALS on full dataset...")
+            data_full = self._prepare_data(df, len(df) - 1)
+            try:
+                buy_signals_full, sell_signals_full = strategy_func(data_full)
+                logger.debug(f"✅ SIGNALS COMPUTED: {np.sum(buy_signals_full)} buy signals, {np.sum(sell_signals_full)} sell signals")
+                print(f"[BACKTEST] Found {np.sum(buy_signals_full)} buy signals, {np.sum(sell_signals_full)} sell signals")
+            except Exception as e:
+                logger.error(f"❌ SIGNAL GENERATION FAILED: {e}")
+                return {"error": f"Strategy execution failed: {str(e)}"}
+            
             print("[BACKTEST] Strategy function loaded successfully")
             
             # Initialize state
@@ -86,34 +97,16 @@ class Backtester:
             max_drawdown = 0
             peak_equity = self.initial_capital
             
-            # Run through each candle
+            # Run through each candle (use pre-computed signals)
             for i in range(1, len(df)):
                 row = df.iloc[i]
                 current_price = row['close']
                 
-                # Prepare data for strategy (arrays up to current point)
-                data = self._prepare_data(df, i)
+                # Get pre-computed signals for this candle
+                buy_signal = buy_signals_full[i] if i < len(buy_signals_full) else False
+                sell_signal = sell_signals_full[i] if i < len(sell_signals_full) else False
                 
-                # Get signals from strategy
-                try:
-                    result = strategy_func(data)
-                    if isinstance(result, tuple) and len(result) == 2:
-                        buy_signal, sell_signal = result
-                    else:
-                        # Handle single boolean return
-                        buy_signal = result
-                        sell_signal = False
-                    
-                    # Handle array vs single value
-                    if hasattr(buy_signal, '__len__') and len(buy_signal) > 0:
-                        buy_signal = buy_signal[-1]  # Get last value
-                    if hasattr(sell_signal, '__len__') and len(sell_signal) > 0:
-                        sell_signal = sell_signal[-1]
-                    
-                    logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
-                except Exception as e:
-                    logger.warning(f"⚠️ Strategy failed on candle {i}: {e}")
-                    continue  # Skip this candle if strategy fails
+                logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
                 
                 # Check for existing position exit
                 if position != 0:
