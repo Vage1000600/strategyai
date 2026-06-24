@@ -326,6 +326,10 @@ class Backtester:
             'min': min, 'max': max, 'sum': sum,
             'pow': pow, 'round': round, 'zip': zip,
             'enumerate': enumerate, 'Exception': Exception,
+            'bool': bool, 'int': int, 'float': float,
+            'str': str, 'list': list, 'tuple': tuple,
+            'dict': dict, 'set': set, 'type': type,
+            'True': True, 'False': False, 'None': None,
         }
         
         # Block dangerous imports with a callable function
