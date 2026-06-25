@@ -195,35 +195,46 @@ def generate_with_provider(prompt: str, provider: str = 'groq', api_key: str = N
         return {'error': f'{provider.title()}: {str(e)}', 'provider': provider, 'fallback': 'local'}
 
 def generate_strategy_code(user_input: str, provider: str = 'groq', api_keys: Dict = None) -> dict:
-    prompt = f"""Generate a COMPLETE Python trading strategy.
+    prompt = f"""Generate a COMPLETE Python trading strategy using ONLY NUMPY.
 
-CRITICAL REQUIREMENTS:
-1. MUST have: import numpy as np
-2. MUST have: def strategy(data):
-3. MUST calculate buy_signals and sell_signals
-4. MUST end with: return buy_signals, sell_signals
+⚠️ CRITICAL: data['close'] is a NUMPY ARRAY, NOT pandas!
 
-Example format:
+✅ DO use: np.diff(), np.convolve(), np.roll(), np.cumsum()
+❌ DON'T use: .diff(), .rolling(), .shift() (these are pandas methods!)
+
+REQUIRED FORMAT:
 ```python
 import numpy as np
 
 def strategy(data):
-    # Your strategy logic here
-    # data['close'], data['open'], data['high'], data['low'], data['volume']
+    # data['close'] is a numpy array (NOT pandas!)
     
-    # Calculate your indicator
-    # ...
+    # Example RSI with numpy (correct):
+    delta = np.diff(data['close'])  # ✅ numpy
+    gain = np.where(delta > 0, delta, 0)
+    loss = np.where(delta < 0, -delta, 0)
     
-    # Generate signals
-    buy_signals = ...  # boolean array
-    sell_signals = ...  # boolean array
+    # Example with convolve (correct):
+    avg_gain = np.convolve(gain, np.ones(14)/14, mode='valid')
+    
+    # Generate boolean signals
+    buy_signals = np.zeros(len(data['close']), dtype=bool)
+    sell_signals = np.zeros(len(data['close']), dtype=bool)
+    buy_signals[14:] = ...  # your logic
+    sell_signals[14:] = ...  # your logic
     
     return buy_signals, sell_signals  # REQUIRED!
 ```
 
+❌ WRONG (pandas syntax - will fail):
+```python
+delta = data['close'].diff(1)  # ❌ .diff() is pandas!
+rolling = data['close'].rolling(14).mean()  # ❌ .rolling() is pandas!
+```
+
 STRATEGY REQUEST: {user_input}
 
-Respond with code only, NO explanations."""
+Respond with code only, NO explanations. Use ONLY numpy, NOT pandas!"""
     
     if provider == 'local': provider = 'groq'  # Local uses embedded Groq
     key = (api_keys or {}).get(provider) if provider != 'groq' else GROQ_API_KEY
@@ -241,6 +252,18 @@ def validate_strategy(code: str) -> dict:
     if "return" not in code: errors.append("No return statement")
     for d in ['os.system', 'subprocess', 'eval(', 'exec(']:
         if d in code: errors.append(f"Security: {d} not allowed")
+    
+    # Check for pandas methods being used (will fail on numpy arrays)
+    pandas_patterns = [
+        (r'\.diff\(', 'Use np.diff(array) instead of array.diff()'),
+        (r'\.rolling\(', 'Use np.convolve() instead of .rolling()'),
+        (r'\.shift\(', 'Use np.roll() instead of .shift()'),
+        (r'\.fillna\(', 'Use np.nan_to_num() instead of .fillna()'),
+        (r'\.dropna\(', 'Use boolean indexing instead of .dropna()'),
+    ]
+    for pattern, msg in pandas_patterns:
+        if re.search(pattern, code):
+            errors.append(f"Pandas method detected: {msg}")
     
     return {'valid': len(errors) == 0, 'errors': errors, 'warnings': warnings}
 
