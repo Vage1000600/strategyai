@@ -348,7 +348,7 @@ def get_html_page():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StrategyAI &mdash; AI Trading Strategy Backtester v2</title>
+  <title>StrategyAI &mdash; AI Trading Strategy Backtester</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -1773,23 +1773,6 @@ def get_html_page():
       }
     }
 
-    function editCode() {
-      const codeArea = document.getElementById('generated_code');
-      const newCode = prompt('Edit your strategy code:', codeArea.textContent);
-      if (newCode) {
-        currentCode = newCode;
-        codeArea.innerHTML = hlCode(newCode);
-      }
-    }
-
-    async function runBacktest(event) {
-      event.preventDefault();
-      await generateCode();
-      if (currentCode) {
-        await runBacktestFromCode();
-      }
-    }
-
     async function runBacktestFromCode() {
       if (!currentCode) return;
       showLoading();
@@ -1809,17 +1792,14 @@ def get_html_page():
         const data = await res.json();
         if (data.success && data.metrics) {
           const m = data.metrics;
-          const pnl = m.pnl || 0;
-          const ret = m.return_pct || 0;
-          const op = m.outperformance || 0;
-          setMetric('metric_pnl', '$' + pnl.toFixed(2), pnl >= 0 ? 'v-green' : 'v-red');
-          setMetric('metric_return', ret.toFixed(2) + '%', ret >= 0 ? 'v-green' : 'v-red');
+          setMetric('metric_pnl', '$' + (m.pnl||0).toFixed(2), (m.pnl||0) >= 0 ? 'v-green' : 'v-red');
+          setMetric('metric_return', (m.return_pct||0).toFixed(2) + '%', (m.return_pct||0) >= 0 ? 'v-green' : 'v-red');
           setMetric('metric_sharpe', (m.sharpe||0).toFixed(2), 'v-amber');
           setMetric('metric_drawdown', (m.max_drawdown||0).toFixed(2) + '%', 'v-red');
           setMetric('metric_winrate', (m.win_rate||0).toFixed(1) + '%', 'v-teal');
-          setMetric('metric_benchmark', ((m.benchmark_return||0).toFixed(2)) + '%', 'v-muted');
-          setMetric('metric_outperformance', (op>=0?'+':'') + op.toFixed(2) + '%', op>=0?'v-green':'v-red');
-          document.getElementById('final_code').innerHTML = hlCode(data.code || currentCode);
+          setMetric('metric_benchmark', (m.benchmark_return||0).toFixed(2) + '%', 'v-muted');
+          setMetric('metric_outperformance', ((m.outperformance||0)>=0?'+':'') + (m.outperformance||0).toFixed(2) + '%', (m.outperformance||0)>=0?'v-green':'v-red');
+          document.getElementById('final_code').innerHTML = hlCode(data.code);
           Plotly.newPlot('equity_chart', [{
             x: Array.from({length: data.charts.equity.length}, (_,i) => i),
             y: data.charts.equity,
@@ -1829,9 +1809,9 @@ def get_html_page():
           }], {
             margin: { t:8, b:38, l:56, r:8 },
             paper_bgcolor: 'rgba(0,0,0,0)',
-            plot_bgcolor:  'rgba(0,0,0,0)',
-            xaxis: { title: 'Candles', gridcolor: 'rgba(255,255,255,0.035)', tickfont: { color:'#424956', size:10, family:'JetBrains Mono' }, titlefont: { color:'#424956', size:10 } },
-            yaxis: { title: 'Value (USDT)', gridcolor: 'rgba(255,255,255,0.035)', tickfont: { color:'#424956', size:10, family:'JetBrains Mono' }, titlefont: { color:'#424956', size:10 } },
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            xaxis: { title: 'Candles', gridcolor: 'rgba(255,255,255,0.035)', tickfont: { color:'#424956', size:10, family:'JetBrains Mono' } },
+            yaxis: { title: 'Value (USDT)', gridcolor: 'rgba(255,255,255,0.035)', tickfont: { color:'#424956', size:10, family:'JetBrains Mono' } },
             showlegend: false
           }, { responsive:true, displayModeBar:false });
         } else {
@@ -1841,7 +1821,20 @@ def get_html_page():
       finally { hideLoading(); }
     }
 
-    // Init
+    function editCode() {
+      const nw = prompt('Edit strategy code:', currentCode);
+      if (nw) {
+        currentCode = nw;
+        document.getElementById('generated_code').innerHTML = hlCode(nw);
+      }
+    }
+
+    async function runBacktest(event) {
+      if (event) event.preventDefault();
+      await generateCode();
+      if (currentCode) await runBacktestFromCode();
+    }
+
     refreshStatus();
   </script>
 </body>
