@@ -327,39 +327,43 @@ def get_html_page():
     <style>
         body { font-family: 'Inter', -apple-system, sans-serif; }
         .dark {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
             color: #e2e8f0;
         }
         .glass-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(30, 41, 59, 0.8);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(148, 163, 184, 0.1);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
         }
         .glass-card:hover {
-            border-color: rgba(99, 102, 241, 0.3);
-            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.2);
+            transform: translateY(-2px);
         }
         .gradient-text {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(129, 140, 248, 0.3));
         }
         .btn-primary {
             background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             color: white;
-            padding: 12px 24px;
-            border-radius: 12px;
+            padding: 14px 28px;
+            border-radius: 14px;
             font-weight: 600;
             transition: all 0.3s ease;
             border: none;
             cursor: pointer;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
         }
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
         }
         .btn-secondary {
             background: rgba(148, 163, 184, 0.1);
@@ -390,29 +394,33 @@ def get_html_page():
             box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
         }
         .input-field {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(15, 23, 42, 0.7);
             border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 10px;
-            padding: 12px 16px;
+            border-radius: 12px;
+            padding: 14px 18px;
             color: #e2e8f0;
             transition: all 0.3s ease;
             width: 100%;
+            font-size: 14px;
         }
         .input-field:focus {
             outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+            background: rgba(15, 23, 42, 0.8);
         }
         .metric-card {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
-            border: 1px solid rgba(148, 163, 184, 0.1);
-            border-radius: 12px;
-            padding: 20px;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 16px;
+            padding: 24px;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
         }
         .metric-card:hover {
-            transform: translateY(-4px);
-            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-6px);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
         }
         .loader {
             border: 3px solid rgba(99, 102, 241, 0.1);
@@ -427,13 +435,19 @@ def get_html_page():
             100% { transform: rotate(360deg); }
         }
         pre {
-            background: #0f172a;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 12px;
-            padding: 20px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 16px;
+            padding: 24px;
             overflow-x: auto;
-            max-height: 400px;
+            max-height: 450px;
             overflow-y: auto;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.6;
         }
         .api-status {
             padding: 12px;
@@ -452,35 +466,75 @@ def get_html_page():
             color: #fbbf24;
         }
         .validation-pass {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.4);
             color: #10b981;
+            border-radius: 12px;
         }
         .validation-fail {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.4);
             color: #ef4444;
+            border-radius: 12px;
         }
+        .section-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .section-header {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .glass-card {
+            animation: fadeIn 0.4s ease-out;
+        }
+        .code-keyword { color: #c084fc; }
+        .code-function { color: #60a5fa; }
+        .code-string { color: #34d399; }
     </style>
 </head>
 <body class="min-h-screen">
-    <header class="py-8 border-b border-white/5">
+    <header class="py-10 border-b border-white/5">
         <div class="container mx-auto px-4">
-            <h1 class="text-5xl font-bold mb-2">
-                <span class="gradient-text">🚀 StrategyAI</span>
-            </h1>
-            <p class="text-xl text-slate-400">AI-Powered Trading Strategy Backtester</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-5xl font-bold mb-2">
+                        <span class="gradient-text">🚀 StrategyAI</span>
+                    </h1>
+                    <p class="text-lg text-slate-400">AI-Powered Trading Strategy Backtester</p>
+                </div>
+                <div class="hidden md:block">
+                    <span class="px-4 py-2 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-sm text-indigo-300">
+                        ⚡ Bitget AI Hackathon S1
+                    </span>
+                </div>
+            </div>
         </div>
     </header>
 
     <main class="container mx-auto px-4 pb-12">
-        <div class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-1">
-                    <div class="glass-card p-6 sticky top-8">
-                        <h2 class="text-2xl font-bold mb-6 flex items-center">
-                            <span class="mr-2">⚙️</span>
-                            Settings
+        <div class="max-w-[1600px] mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-4">
+                    <div class="glass-card p-8 sticky top-8">
+                        <h2 class="text-2xl font-bold mb-8 flex items-center">
+                            <span class="mr-3 text-3xl">⚙️</span>
+                            <div>
+                                <div class="text-sm text-slate-400 font-medium">Configuration</div>
+                                <div class="text-white">Settings</div>
+                            </div>
                         </h2>
                         
                         <!-- API Status -->
@@ -642,12 +696,12 @@ def get_html_page():
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-sm font-semibold text-slate-300 mb-2">🚀 Quick Strategies</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button type="button" onclick="setStrategy('Buy when RSI < 30, sell when RSI > 70')" class="btn-secondary text-sm">📊 RSI</button>
-                                    <button type="button" onclick="setStrategy('Buy when MACD crosses above signal, sell when crosses below')" class="btn-secondary text-sm">📈 MACD</button>
-                                    <button type="button" onclick="setStrategy('Buy when 50 EMA crosses above 200 EMA, sell on reverse')" class="btn-secondary text-sm">🎯 Golden Cross</button>
-                                    <button type="button" onclick="setStrategy('Buy when price breaks above upper Bollinger Band, sell at middle')" class="btn-secondary text-sm">🔥 Bollinger</button>
+                                <label class="block text-sm font-semibold text-slate-300 mb-3">🚀 Quick Strategies</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button type="button" onclick="setStrategy('Buy when RSI < 30, sell when RSI > 70')" class="px-4 py-3 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 border border-indigo-500/30 rounded-xl text-sm font-medium text-white transition-all hover:scale-105">📊 RSI</button>
+                                    <button type="button" onclick="setStrategy('Buy when MACD crosses above signal, sell when crosses below')" class="px-4 py-3 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 border border-indigo-500/30 rounded-xl text-sm font-medium text-white transition-all hover:scale-105">📈 MACD</button>
+                                    <button type="button" onclick="setStrategy('Buy when 50 EMA crosses above 200 EMA, sell on reverse')" class="px-4 py-3 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 border border-indigo-500/30 rounded-xl text-sm font-medium text-white transition-all hover:scale-105">🎯 Golden Cross</button>
+                                    <button type="button" onclick="setStrategy('Buy when price breaks above upper Bollinger Band, sell at middle')" class="px-4 py-3 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 border border-indigo-500/30 rounded-xl text-sm font-medium text-white transition-all hover:scale-105">🔥 Bollinger</button>
                                 </div>
                             </div>
 
@@ -661,17 +715,20 @@ def get_html_page():
                     </div>
                 </div>
 
-                <div class="lg:col-span-2 space-y-6">
+                <div class="lg:col-span-8 space-y-6">
                     <!-- Loading State -->
-                    <div id="loading" class="hidden glass-card p-12 text-center">
-                        <div class="loader mx-auto mb-4"></div>
-                        <p class="text-xl font-semibold text-slate-300">🤖 AI is generating...</p>
-                        <p class="text-slate-500 mt-2">This takes 5-10 seconds</p>
+                    <div id="loading" class="hidden glass-card p-16 text-center">
+                        <div class="loader mx-auto mb-6"></div>
+                        <p class="text-2xl font-semibold text-white mb-2">🤖 AI is generating...</p>
+                        <p class="text-slate-400">Creating your trading strategy • 5-10 seconds</p>
                     </div>
 
                     <!-- Code Review Section (shown after generation) -->
-                    <div id="code_review" class="hidden glass-card p-6">
-                        <h3 class="text-xl font-bold mb-4">💻 Generated Strategy Code</h3>
+                    <div id="code_review" class="hidden glass-card p-8">
+                        <h3 class="text-2xl font-bold mb-6 flex items-center">
+                            <span class="mr-3 text-3xl">💻</span>
+                            Generated Strategy Code
+                        </h3>
                         
                         <div id="code_validation" class="mb-4 p-3 rounded-lg text-sm font-semibold">
                             <!-- Validation status will be shown here -->
@@ -714,8 +771,11 @@ def get_html_page():
                             </div>
                         </div>
 
-                        <div class="glass-card p-6">
-                            <h3 class="text-xl font-bold mb-4">📊 vs Buy & Hold</h3>
+                        <div class="glass-card p-8">
+                            <h3 class="text-2xl font-bold mb-6 flex items-center">
+                                <span class="mr-3 text-3xl">📊</span>
+                                Performance vs Buy & Hold
+                            </h3>
                             <div class="grid grid-cols-2 gap-6">
                                 <div>
                                     <p class="text-sm text-slate-400 mb-1">Buy & Hold Return</p>
@@ -728,13 +788,19 @@ def get_html_page():
                             </div>
                         </div>
 
-                        <div class="glass-card p-6">
-                            <h3 class="text-xl font-bold mb-4">📈 Equity Curve</h3>
-                            <div id="equity_chart" class="w-full h-96"></div>
+                        <div class="glass-card p-8">
+                            <h3 class="text-2xl font-bold mb-6 flex items-center">
+                                <span class="mr-3 text-3xl">📈</span>
+                                Equity Curve
+                            </h3>
+                            <div id="equity_chart" class="w-full h-[450px]"></div>
                         </div>
 
-                        <div class="glass-card p-6">
-                            <h3 class="text-xl font-bold mb-4">💻 Final Generated Code</h3>
+                        <div class="glass-card p-8">
+                            <h3 class="text-2xl font-bold mb-6 flex items-center">
+                                <span class="mr-3 text-3xl">💻</span>
+                                Final Strategy Code
+                            </h3>
                             <pre id="final_code"><code class="text-sm text-emerald-400">def strategy(data):<br>&nbsp;&nbsp;# Strategy code will appear here...</code></pre>
                         </div>
                     </div>
@@ -749,9 +815,22 @@ def get_html_page():
         </div>
     </main>
 
-    <footer class="border-t border-white/5 py-8">
-        <div class="container mx-auto px-4 text-center text-slate-400">
-            <p>Built for <strong class="text-slate-300">Bitget AI Hackathon S1</strong> | Trading Infra Track</p>
+    <footer class="border-t border-white/5 py-12 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="text-center md:text-left">
+                    <p class="text-slate-400">
+                        Built for <span class="text-indigo-400 font-semibold">Bitget AI Hackathon S1</span>
+                    </p>
+                    <p class="text-slate-500 text-sm mt-1">Trading Infra Track • 2026</p>
+                </div>
+                <div class="flex items-center gap-6 text-sm text-slate-400">
+                    <span class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                        System Operational
+                    </span>
+                </div>
+            </div>
         </div>
     </footer>
 
@@ -880,13 +959,17 @@ def get_html_page():
                         validationDiv.innerHTML = '❌ <strong>Validation Failed:</strong> ' + data.validation.errors.join(', ');
                     }
                     
-                    // Show code
-                    document.getElementById('generated_code').innerHTML = data.code
+                    // Show code with syntax highlighting
+                    let highlighted = data.code
                         .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/def/g, '<span class="text-purple-400">def</span>')
-                        .replace(/return/g, '<span class="text-purple-400">return</span>')
-                        .replace(/import/g, '<span class="text-purple-400">import</span>');
+                        .replace(/>/g, '&gt;');
+                    // Python keywords
+                    highlighted = highlighted.replace(/\b(def|return|import|from|if|else|elif|for|while|class|try|except|finally|with|as|lambda|yield|pass|break|continue|and|or|not|in|is|None|True|False|async|await)\b/g, '<span class="code-keyword">$1</span>');
+                    // Built-in functions
+                    highlighted = highlighted.replace(/\b(print|len|range|str|int|float|bool|list|dict|set|tuple|abs|max|min|sum|round|pow|zip|enumerate|map|filter|open|eval|exec|input|help|dir|vars|repr|format|id|type|isinstance|callable|getattr|setattr|hasattr|sorted|reversed|iter|next|all|any|getattr|setattr|delattr|compile|exec|vars|globals|locals|oct|hex|bin|chr|ord|ascii|bytearray|bytes|classmethod|staticmethod|super|property|slice|type|object|issubclass|isinstance|callable|hash|repr|format|open|round|pow|abs|min|max|sum|sorted|reversed|enumerate|zip|map|filter|any|all|getattr|setattr|hasattr|delattr|iter|next|divmod|frozenset|complex|float|int|bool|str|bytes|bytearray|tuple|list|dict|set)\b/g, '<span class="code-function">$1</span>');
+                    // Strings
+                    highlighted = highlighted.replace(/(['"])(?:(?=(\\?))\2.)*?\1/g, '<span class="code-string">$&</span>');
+                    document.getElementById('generated_code').innerHTML = highlighted;
                     
                     document.getElementById('code_review').classList.remove('hidden');
                 } else {
