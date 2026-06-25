@@ -1825,7 +1825,6 @@ def get_html_page():
       const nw = prompt('Edit strategy code:', currentCode);
       if (nw) {
         currentCode = nw;
-        document.getElementById('generated_code').innerHTML = hlCode(nw);
       }
     }
 
