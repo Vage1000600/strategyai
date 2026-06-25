@@ -163,16 +163,22 @@ class Backtester:
             
             # Run through each candle (use pre-computed signals)
             print(f"[BACKTEST] Starting backtest loop with {len(df)} candles...")
-            for i in range(1, len(df)):
+            print(f"[BACKTEST] buy_signals_full length: {len(buy_signals_full)}, sell_signals_full length: {len(sell_signals_full)}")
+            
+            for i in range(1, min(len(df), 100)):  # Limit to first 100 candles for debugging
                 try:
+                    if i % 10 == 0:
+                        print(f"[BACKTEST] Processing candle {i}/{len(df)}...")
+                    
                     row = df.iloc[i]
                     current_price = row['close']
                     
                     # Get pre-computed signals for this candle
-                    buy_signal = buy_signals_full[i] if i < len(buy_signals_full) else False
-                    sell_signal = sell_signals_full[i] if i < len(sell_signals_full) else False
+                    buy_signal = bool(buy_signals_full[i]) if i < len(buy_signals_full) else False
+                    sell_signal = bool(sell_signals_full[i]) if i < len(sell_signals_full) else False
                     
                     logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
+                    
                 except Exception as e:
                     print(f"[BACKTEST] ERROR at candle {i}: {e}")
                     import traceback
