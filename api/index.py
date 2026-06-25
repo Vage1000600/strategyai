@@ -348,7 +348,7 @@ def get_html_page():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StrategyAI &mdash; AI Trading Strategy Backtester</title>
+  <title>StrategyAI &mdash; AI Trading Strategy Backtester v2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
