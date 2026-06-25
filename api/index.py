@@ -14,11 +14,20 @@ from datetime import datetime
 # Add parent directory to path for backend imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ai_generator import generate_strategy_code, validate_strategy, validate_and_fix
-from backtester import run_backtest
-from memory_system import store_backtest, get_insights
-from strategy_scorer import score_strategy
-from position_sizing import calculate_position_size, check_portfolio_heat
+# Import with error handling to catch issues early
+try:
+    from ai_generator import generate_strategy_code, validate_strategy, validate_and_fix
+    from backtester import run_backtest
+    from memory_system import store_backtest, get_insights
+    from strategy_scorer import score_strategy
+    from position_sizing import calculate_position_size, check_portfolio_heat
+    IMPORT_ERROR = None
+except Exception as e:
+    IMPORT_ERROR = str(e)
+    import traceback
+    IMPORT_TRACEBACK = traceback.format_exc()
+    print(f"❌ IMPORT ERROR: {IMPORT_ERROR}")
+    print(IMPORT_TRACEBACK)
 
 # Create FastAPI app - MUST be at module level for Vercel
 app = FastAPI(title="StrategyAI")
@@ -61,7 +70,12 @@ def convert_timestamps(obj):
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """Serve the main HTML page"""
+    """Serve the main HTML page with import error check"""
+    if IMPORT_ERROR:
+        return HTMLResponse(
+            content=f"<h1>❌ Import Error</h1><pre>{IMPORT_ERROR}\n\n{IMPORT_TRACEBACK}</pre>",
+            status_code=500
+        )
     return HTMLResponse(content=get_html_page())
 
 
@@ -282,8 +296,21 @@ async def run_backtest_endpoint(
 
 @app.get("/health")
 async def health():
-    """Health check"""
+    """Health check with import status"""
+    if IMPORT_ERROR:
+        return {'status': 'error', 'import_error': IMPORT_ERROR}
     return {'status': 'ok'}
+
+
+@app.get("/debug/imports")
+async def debug_imports():
+    """Debug endpoint to check imports"""
+    return {
+        'import_error': IMPORT_ERROR,
+        'traceback': IMPORT_TRACEBACK if 'IMPORT_TRACEBACK' in dir() else None,
+        'ai_generator_ok': 'generate_strategy_code' in dir() or IMPORT_ERROR is not None,
+        'backtester_ok': 'run_backtest' in dir() or IMPORT_ERROR is not None,
+    }
 
 
 @app.get("/insights")
