@@ -236,6 +236,7 @@ def validate_and_fix(code: str) -> dict:
     import re, ast
     lines = code.split('\n')
     cleaned, in_func = [], False
+    module_level_code = []  # Code outside functions
     
     for line in lines:
         stripped = line.strip()
@@ -244,12 +245,40 @@ def validate_and_fix(code: str) -> dict:
         elif in_func:
             if stripped and not line.startswith(' ') and not line.startswith('\t'):
                 in_func = False
-                if stripped.startswith('def '): cleaned.append(line); in_func = True
-            else: cleaned.append(line)
+                if stripped.startswith('def '): 
+                    cleaned.append(line)
+                    in_func = True
+                elif stripped:  # Non-empty line outside function - module level!
+                    module_level_code.append(line)
+            else:
+                cleaned.append(line)
         elif stripped.startswith('def '):
-            cleaned.append(line); in_func = True
+            cleaned.append(line)
+            in_func = True
+        elif stripped:  # Non-empty line outside function - module level!
+            module_level_code.append(line)
     
     fixed_code = '\n'.join(cleaned)
+    
+    # If there's module-level code, wrap it in strategy function
+    if module_level_code:
+        # Find where to insert the wrapped code (after imports, before first def)
+        insert_idx = 0
+        for i, line in enumerate(cleaned):
+            if line.strip().startswith('def '):
+                insert_idx = i
+                break
+        
+        # Wrap module-level code in strategy function
+        wrapped = ['def strategy(data):']
+        for line in module_level_code:
+            wrapped.append('    ' + line if line.strip() else '')
+        wrapped.append('    return np.zeros(len(data[\'close\']), dtype=bool), np.zeros(len(data[\'close\']), dtype=bool)')
+        
+        # Insert wrapped code
+        cleaned = cleaned[:insert_idx] + wrapped + cleaned[insert_idx:]
+        fixed_code = '\n'.join(cleaned)
+    
     if 'import numpy' not in fixed_code:
         fixed_code = 'import numpy as np\n\n' + fixed_code
     
@@ -259,5 +288,5 @@ def validate_and_fix(code: str) -> dict:
     
     validation = validate_strategy(fixed_code)
     validation['code'] = fixed_code
-    validation['fixes_applied'] = ['Cleaned module-level code', 'Added numpy import']
+    validation['fixes_applied'] = ['Wrapped module-level code in strategy()', 'Added numpy import']
     return validation
