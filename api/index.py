@@ -182,8 +182,14 @@ async def run_backtest_endpoint(
         else:
             code = generated_code
         
-        # Validate the code
+        # ALWAYS validate the code (even if user provided it)
         validation = validate_strategy(code)
+        if not validation['valid']:
+            return JSONResponse({
+                'success': False,
+                'error': 'Code validation failed: ' + ', '.join(validation['errors']),
+                'validation_errors': validation['errors']
+            })
         if not validation['valid']:
             return JSONResponse({
                 'success': False,
@@ -208,7 +214,11 @@ async def run_backtest_endpoint(
         )
         
         if 'error' in results:
-            return JSONResponse({'success': False, 'error': f"Backtest Error: {results['error']}"})
+            error_msg = results['error']
+            # Add helpful context for common errors
+            if 'name' in error_msg.lower() and 'not defined' in error_msg.lower():
+                error_msg += '. Make sure all code is inside function definitions (def), with no test code or example usage at the bottom.'
+            return JSONResponse({'success': False, 'error': f"Backtest Error: {error_msg}"})
         
         # Extract metrics from new backtester structure
         metrics = results.get('metrics', results)  # Support both old and new structure
