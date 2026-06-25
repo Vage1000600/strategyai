@@ -596,6 +596,20 @@ def generate_strategy_code(user_input: str, provider: str = 'local', api_keys: D
         dict with code, strategy_type, indicators, reasoning, provider
     """
     try:
+        # FIRST: Check if we should use a template (faster and guaranteed valid!)
+        template_name = detect_template(user_input)
+        if template_name and template_name in TEMPLATES:
+            code = TEMPLATES[template_name]
+            return {
+                'code': code,
+                'strategy_type': f'{template_name.title()} Template',
+                'indicators': [template_name.upper()],
+                'reasoning': f'Used pre-built {template_name} template (validated)',
+                'provider': 'local',
+                'template_used': True
+            }
+        
+        # No template matched - use AI generation
         # Build prompt for AI providers
         prompt = f"""Generate Python trading strategy code.
 
