@@ -151,15 +151,22 @@ class Backtester:
             peak_equity = self.initial_capital
             
             # Run through each candle (use pre-computed signals)
+            print(f"[BACKTEST] Starting backtest loop with {len(df)} candles...")
             for i in range(1, len(df)):
-                row = df.iloc[i]
-                current_price = row['close']
-                
-                # Get pre-computed signals for this candle
-                buy_signal = buy_signals_full[i] if i < len(buy_signals_full) else False
-                sell_signal = sell_signals_full[i] if i < len(sell_signals_full) else False
-                
-                logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
+                try:
+                    row = df.iloc[i]
+                    current_price = row['close']
+                    
+                    # Get pre-computed signals for this candle
+                    buy_signal = buy_signals_full[i] if i < len(buy_signals_full) else False
+                    sell_signal = sell_signals_full[i] if i < len(sell_signals_full) else False
+                    
+                    logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
+                except Exception as e:
+                    print(f"[BACKTEST] ERROR at candle {i}: {e}")
+                    import traceback
+                    print(f"[BACKTEST] Traceback: {traceback.format_exc()}")
+                    raise
                 
                 # Check for existing position exit
                 if position != 0:
