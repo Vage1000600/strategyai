@@ -20,35 +20,48 @@ def cleanup_strategy_code(code: str) -> str:
     """Remove any code after the strategy function to prevent execution errors"""
     lines = code.split('\n')
     cleaned = []
-    in_strategy = False
-    strategy_indent = 0
+    in_function = False
+    function_indent = 0
     found_strategy = False
     
     for line in lines:
         stripped = line.strip()
         
-        # Detect start of strategy function
-        if stripped.startswith('def strategy('):
-            in_strategy = True
-            found_strategy = True
-            strategy_indent = len(line) - len(line.lstrip())
-            cleaned.append(line)
+        # Skip empty lines at the end
+        if stripped == '' and found_strategy and not in_function:
             continue
         
-        if in_strategy:
+        # Detect start of any function
+        if stripped.startswith('def '):
+            func_name = stripped[4:].split('(')[0]
+            in_function = True
+            function_indent = len(line) - len(line.lstrip())
+            cleaned.append(line)
+            
+            if func_name == 'strategy':
+                found_strategy = True
+            continue
+        
+        if in_function:
             current_indent = len(line) - len(line.lstrip())
-            # Keep indented lines inside strategy
-            if stripped == '' or current_indent > strategy_indent:
+            # Keep indented lines inside function
+            if stripped == '' or current_indent > function_indent:
                 cleaned.append(line)
-            elif stripped.startswith('def ') and current_indent <= strategy_indent:
-                # Another top-level function - stop here
-                break
+            elif stripped.startswith('def '):
+                # Another function at same or higher level
+                in_function = True
+                function_indent = current_indent
+                cleaned.append(line)
+                if stripped.startswith('def strategy('):
+                    found_strategy = True
             else:
-                # Back to top-level - stop here
+                # Back to top-level - STOP here
                 break
         else:
-            # Before strategy - keep imports and helpers
-            cleaned.append(line)
+            # Before any function - keep imports and comments only
+            if stripped.startswith('import ') or stripped.startswith('from ') or stripped.startswith('#') or stripped == '':
+                cleaned.append(line)
+            # Skip any other top-level code (like variable assignments)
     
     # If no strategy function found, return original
     if not found_strategy:

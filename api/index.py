@@ -14,7 +14,7 @@ from datetime import datetime
 # Add parent directory to path for backend imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ai_generator import generate_strategy_code, validate_strategy
+from ai_generator import generate_strategy_code, validate_strategy, cleanup_strategy_code
 from backtester import run_backtest
 from memory_system import store_backtest, get_insights
 from strategy_scorer import score_strategy
@@ -167,6 +167,9 @@ async def run_backtest_endpoint(
             code = generated['code']
         else:
             code = generated_code
+        
+        # CRITICAL: Clean up any trailing code before validation and execution
+        code = cleanup_strategy_code(code)
         
         # Validate the code
         validation = validate_strategy(code)

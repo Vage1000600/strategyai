@@ -364,7 +364,8 @@ class Backtester:
             
             logger.info(f"✅ BACKTEST COMPLETE: final_capital={final_capital}, total_trades={total_trades}, return={return_pct:.2f}%")
             logger.debug(f"📈 Equity curve length: {len(equity_curve)}, Trades: {len(trades)}")
-            print(f"[BACKTEST] Results: final_capital={final_capital}, total_trades={total_trades}, equity_curve_len={len(equity_curve)}")
+            print(f"[BACKTEST] ✅ COMPLETE: final_capital={final_capital}, total_trades={total_trades}, return_pct={return_pct:.2f}%")
+            print(f"[BACKTEST] Equity curve: {len(equity_curve)} points, Trades: {len(trades)}")
             
             return {
                 'success': True,
