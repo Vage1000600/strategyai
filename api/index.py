@@ -256,6 +256,10 @@ async def run_backtest_endpoint(
                 })
         else:
             code = generated_code
+            # DEBUG: Log the code being received
+            print(f"[DEBUG] Received generated_code: {len(code)} chars")
+            print(f"[DEBUG] Code has 'def strategy': {'def strategy(' in code}")
+            print(f"[DEBUG] Code starts with: {repr(code[:200])}")
         
         # Final validation
         validation = validate_strategy(code)
