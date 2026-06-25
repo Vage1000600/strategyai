@@ -91,7 +91,7 @@ class Backtester:
                     logger.error("❌ strategy_func is not callable")
                     return {"error": "Strategy function is not callable"}
                 
-    logger.debug(f"🔧 Calling strategy_func with data_full (type={type(data_full)})")
+                logger.debug(f"🔧 Calling strategy_func with data_full (type={type(data_full)})")
                 logger.debug(f"   data_full keys: {list(data_full.keys())}")
                 logger.debug(f"   strategy_func source (first 500 chars): {str(strategy_func)[:500]}")
                 
