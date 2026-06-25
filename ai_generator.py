@@ -16,6 +16,47 @@ from typing import Dict, List
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')  # Set in Vercel dashboard
 
 
+def cleanup_strategy_code(code: str) -> str:
+    """Remove any code after the strategy function to prevent execution errors"""
+    lines = code.split('\n')
+    cleaned = []
+    in_strategy = False
+    strategy_indent = 0
+    found_strategy = False
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Detect start of strategy function
+        if stripped.startswith('def strategy('):
+            in_strategy = True
+            found_strategy = True
+            strategy_indent = len(line) - len(line.lstrip())
+            cleaned.append(line)
+            continue
+        
+        if in_strategy:
+            current_indent = len(line) - len(line.lstrip())
+            # Keep indented lines inside strategy
+            if stripped == '' or current_indent > strategy_indent:
+                cleaned.append(line)
+            elif stripped.startswith('def ') and current_indent <= strategy_indent:
+                # Another top-level function - stop here
+                break
+            else:
+                # Back to top-level - stop here
+                break
+        else:
+            # Before strategy - keep imports and helpers
+            cleaned.append(line)
+    
+    # If no strategy function found, return original
+    if not found_strategy:
+        return code
+    
+    return '\n'.join(cleaned)
+
+
 # ============================================================================
 # COMPACT STRATEGY TEMPLATES (Most Common 10)
 # ============================================================================
@@ -296,6 +337,9 @@ def generate_with_groq(prompt: str, api_key: str = None) -> dict:
             end = content.find('```', start)
             content = content[start:end].strip()
         
+        # CRITICAL: Remove any trailing code after strategy function
+        content = cleanup_strategy_code(content)
+        
         return {
             'code': content,
             'strategy_type': 'Custom (Groq)',
@@ -331,6 +375,9 @@ def generate_with_ollama(prompt: str, model: str = 'phi3:mini') -> dict:
             start = content.find('```python') + 10
             end = content.find('```', start)
             content = content[start:end].strip()
+        
+        # CRITICAL: Remove any trailing code after strategy function
+        content = cleanup_strategy_code(content)
         
         return {
             'code': content,
@@ -372,6 +419,9 @@ def generate_with_deepseek(prompt: str, api_keys: Dict = None) -> dict:
             end = content.find('```', start)
             content = content[start:end].strip()
         
+        # CRITICAL: Remove any trailing code after strategy function
+        content = cleanup_strategy_code(content)
+        
         return {
             'code': content,
             'strategy_type': 'Custom (DeepSeek)',
@@ -410,6 +460,9 @@ def generate_with_claude(prompt: str, api_keys: Dict = None) -> dict:
             start = content.find('```python') + 10
             end = content.find('```', start)
             content = content[start:end].strip()
+        
+        # CRITICAL: Remove any trailing code after strategy function
+        content = cleanup_strategy_code(content)
         
         return {
             'code': content,
