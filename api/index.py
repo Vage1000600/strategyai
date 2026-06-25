@@ -182,11 +182,12 @@ async def run_backtest_endpoint(
         else:
             code = generated_code
         
-        # DEBUG: Log the code being received
-        print(f"[DEBUG] Received code length: {len(code)} chars")
-        print(f"[DEBUG] Code starts with: {repr(code[:200])}")
-        print(f"[DEBUG] Code has 'def strategy': {'def strategy(' in code}")
-        print(f"[DEBUG] Code has 'import numpy': {'import numpy' in code}")
+        # POST-PROCESS: Ensure code has def strategy(data) wrapper
+        # If code is missing the strategy function, wrap it
+        if 'def strategy(' not in code and 'def strategy (' not in code:
+            # Code is missing strategy function - wrap the entire code
+            code = 'def strategy(data):\n    ' + code.replace('\n', '\n    ')
+            print(f"[FIX] Added def strategy(data) wrapper to code")
         
         # ALWAYS validate the code (even if user provided it)
         validation = validate_strategy(code)
