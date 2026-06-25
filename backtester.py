@@ -50,16 +50,78 @@ class Backtester:
             logger.debug(f"📝 Strategy code length: {len(strategy_code)} chars")
             print(f"[BACKTEST] Starting backtest with {len(df)} candles, initial_capital={self.initial_capital}")
             
-            # SECURITY: Create sandboxed namespace
+            # SECURITY: Create sandboxed namespace and execute strategy code
             safe_builtins = self._create_safe_builtins()
             local_ns = {'__builtins__': safe_builtins}
-            exec(strategy_code, local_ns, local_ns)
+            
+            logger.debug("🔧 Executing strategy code in sandbox...")
+            try:
+                exec(strategy_code, local_ns, local_ns)
+                logger.debug("✅ Strategy code executed successfully")
+            except NameError as ne:
+                logger.error(f"❌ NameError during exec: {ne}")
+                logger.error(f"This usually means code references undefined variables at module level")
+                logger.error(f"Strategy code should ONLY contain function definitions (def), no top-level code")
+                return {"error": f"Strategy code error: {str(ne)}. Make sure code only contains function definitions, no test code or example usage."}
+            except Exception as ex:
+                logger.error(f"❌ Error during exec: {ex}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return {"error": f"Strategy code execution failed: {str(ex)}"}
+            
             strategy_func = local_ns.get('strategy')
             
             if not strategy_func:
                 logger.error("❌ BACKTEST ERROR: No strategy function found")
                 print("[BACKTEST] ERROR: No strategy function found")
                 return {"error": "Strategy function not found. Add 'def strategy(data):'"}
+            
+            logger.debug(f"✅ Strategy function found: {strategy_func}")
+            
+            # PRE-COMPUTE ALL SIGNALS (run strategy once on full dataset)
+            logger.debug(f"📡 PRE-COMPUTING SIGNALS on full dataset...")
+            
+            try:
+                # Prepare data dictionary for strategy
+                data_full = self._prepare_data(df, len(df) - 1)
+                logger.debug(f"📦 Data prepared: keys={list(data_full.keys())}, close_len={len(data_full['close'])}")
+                
+                # Verify strategy function is callable
+                if not callable(strategy_func):
+                    logger.error("❌ strategy_func is not callable")
+                    return {"error": "Strategy function is not callable"}
+                
+    logger.debug(f"🔧 Calling strategy_func with data_full (type={type(data_full)})")
+                logger.debug(f"   data_full keys: {list(data_full.keys())}")
+                logger.debug(f"   strategy_func source (first 500 chars): {str(strategy_func)[:500]}")
+                
+                # Call strategy function
+                buy_signals_full, sell_signals_full = strategy_func(data_full)
+                logger.debug(f"✅ SIGNALS COMPUTED: {np.sum(buy_signals_full)} buy signals, {np.sum(sell_signals_full)} sell signals")
+                print(f"[BACKTEST] Found {np.sum(buy_signals_full)} buy signals, {np.sum(sell_signals_full)} sell signals")
+                
+            except NameError as ne:
+                logger.error(f"❌ NameError in strategy: {ne}")
+                logger.error(f"   This means strategy code references a variable that doesn't exist")
+                logger.error(f"   Common causes:")
+                logger.error(f"   1. Typo in variable name (e.g., 'dat' instead of 'data')")
+                logger.error(f"   2. Using 'data' outside of function definition")
+                logger.error(f"   3. Missing import or helper function")
+                import traceback
+                logger.error(f"   Traceback: {traceback.format_exc()}")
+                return {"error": f"Strategy code error: {str(ne)}. Check for typos or code outside function definitions."}
+            except TypeError as te:
+                logger.error(f"❌ TypeError calling strategy: {te}")
+                logger.error(f"   strategy_func type: {type(strategy_func)}")
+                logger.error(f"   data_full type: {type(data_full)}")
+                import traceback
+                logger.error(f"   Traceback: {traceback.format_exc()}")
+                return {"error": f"Strategy call failed: {str(te)}"}
+            except Exception as e:
+                import traceback
+                logger.error(f"❌ SIGNAL GENERATION FAILED: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return {"error": f"Strategy execution failed: {str(e)}"}
             
             print("[BACKTEST] Strategy function loaded successfully")
             
@@ -86,34 +148,16 @@ class Backtester:
             max_drawdown = 0
             peak_equity = self.initial_capital
             
-            # Run through each candle
+            # Run through each candle (use pre-computed signals)
             for i in range(1, len(df)):
                 row = df.iloc[i]
                 current_price = row['close']
                 
-                # Prepare data for strategy (arrays up to current point)
-                data = self._prepare_data(df, i)
+                # Get pre-computed signals for this candle
+                buy_signal = buy_signals_full[i] if i < len(buy_signals_full) else False
+                sell_signal = sell_signals_full[i] if i < len(sell_signals_full) else False
                 
-                # Get signals from strategy
-                try:
-                    result = strategy_func(data)
-                    if isinstance(result, tuple) and len(result) == 2:
-                        buy_signal, sell_signal = result
-                    else:
-                        # Handle single boolean return
-                        buy_signal = result
-                        sell_signal = False
-                    
-                    # Handle array vs single value
-                    if hasattr(buy_signal, '__len__') and len(buy_signal) > 0:
-                        buy_signal = buy_signal[-1]  # Get last value
-                    if hasattr(sell_signal, '__len__') and len(sell_signal) > 0:
-                        sell_signal = sell_signal[-1]
-                    
-                    logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
-                except Exception as e:
-                    logger.warning(f"⚠️ Strategy failed on candle {i}: {e}")
-                    continue  # Skip this candle if strategy fails
+                logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
                 
                 # Check for existing position exit
                 if position != 0:
@@ -333,6 +377,10 @@ class Backtester:
             'min': min, 'max': max, 'sum': sum,
             'pow': pow, 'round': round, 'zip': zip,
             'enumerate': enumerate, 'Exception': Exception,
+            'bool': bool, 'int': int, 'float': float,
+            'str': str, 'list': list, 'tuple': tuple,
+            'dict': dict, 'set': set, 'type': type,
+            'True': True, 'False': False, 'None': None,
         }
         
         # Block dangerous imports with a callable function
