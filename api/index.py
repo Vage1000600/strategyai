@@ -278,19 +278,33 @@ async def run_backtest_endpoint(
         
         # Run backtest - use provided API key or public API
         # NOTE: api_key and api_secret are NEVER logged
-        results = run_backtest(
-            code=code,
-            symbol=symbol,
-            timeframe=timeframe,
-            initial_capital=initial_capital,
-            fee_rate=fee_rate / 100,
-            slippage=slippage / 100,
-            api_key=api_key if has_api_key else None,
-            api_secret=api_secret if has_api_key and api_secret else None,
-            validate=True,
-            position_size=position_size,
-            trailing_stop=trailing_stop
-        )
+        try:
+            print(f"[BACKTEST] Starting backtest for {symbol} {timeframe}...")
+            results = run_backtest(
+                code=code,
+                symbol=symbol,
+                timeframe=timeframe,
+                initial_capital=initial_capital,
+                fee_rate=fee_rate / 100,
+                slippage=slippage / 100,
+                api_key=api_key if has_api_key else None,
+                api_secret=api_secret if has_api_key and api_secret else None,
+                validate=True,
+                position_size=position_size,
+                trailing_stop=trailing_stop
+            )
+            print(f"[BACKTEST] Result: success={results.get('success')}, pnl={results.get('pnl')}")
+            if not results.get('success'):
+                print(f"[BACKTEST] Error: {results.get('error')}")
+        except Exception as e:
+            import traceback
+            print(f"[BACKTEST] EXCEPTION: {type(e).__name__}: {e}")
+            print(f"[BACKTEST] Traceback: {traceback.format_exc()}")
+            return JSONResponse({
+                'success': False,
+                'error': f'Backtest execution failed: {str(e)}',
+                'debug': 'Check Vercel logs for full traceback'
+            })
         
         if 'error' in results:
             error_msg = results['error']
