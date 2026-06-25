@@ -173,29 +173,50 @@ async def run_backtest_endpoint(
         # SECURITY: Do not log API credentials
         has_api_key = bool(api_key and api_key.strip())
         
-        # Generate code if not provided
+        # Generate code if not provided (with retry loop)
         if not generated_code:
-            generated = generate_strategy_code(strategy_input)
-            if 'error' in generated:
-                return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
-            code = generated['code']
+            max_retries = 3
+            code = None
+            
+            for attempt in range(max_retries):
+                generated = generate_strategy_code(strategy_input)
+                if 'error' in generated:
+                    if attempt == max_retries - 1:
+                        return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
+                    continue
+                
+                code = generated['code']
+                
+                # Validate the code
+                validation = validate_strategy(code)
+                
+                # If validation passes, use this code
+                if validation['valid']:
+                    print(f"[SUCCESS] Code validated on attempt {attempt + 1}")
+                    break
+                
+                # If validation fails, retry with error feedback
+                print(f"[RETRY {attempt + 1}/{max_retries}] Validation failed: {validation['errors']}")
+                if attempt < max_retries - 1:
+                    # Ask AI to fix the errors
+                    fix_prompt = f"Fix these errors in the strategy code: {', '.join(validation['errors'])}. Ensure code has 'def strategy(data):' and 'return buy_signals, sell_signals'."
+                    generated = generate_strategy_code(fix_prompt, provider=ai_provider)
+                    if 'error' not in generated:
+                        code = generated['code']
+            
+            # If all retries failed, apply auto-fix as last resort
+            if code and not validate_strategy(code)['valid']:
+                print(f"[AUTO-FIX] Applying automatic fixes after {max_retries} failed attempts")
+                # Wrap in strategy function if missing
+                if 'def strategy(' not in code:
+                    code = 'def strategy(data):\n    ' + code.replace('\n', '\n    ')
+                # Add return if missing
+                if 'return ' not in code:
+                    code = code.rstrip() + '\n    return np.zeros(len(data[\'close\']), dtype=bool), np.zeros(len(data[\'close\']), dtype=bool)'
         else:
             code = generated_code
         
-        # POST-PROCESS: Ensure code has def strategy(data) wrapper
-        # If code is missing the strategy function, wrap it
-        if 'def strategy(' not in code and 'def strategy (' not in code:
-            # Code is missing strategy function - wrap the entire code
-            code = 'def strategy(data):\n    ' + code.replace('\n', '\n    ')
-            print(f"[FIX] Added def strategy(data) wrapper to code")
-        
-        # POST-PROCESS: Ensure code has return statement
-        if 'return ' not in code:
-            # Add return statement at the end
-            code = code.rstrip() + '\n    return np.zeros(len(data[\'close\']), dtype=bool), np.zeros(len(data[\'close\']), dtype=bool)'
-            print(f"[FIX] Added return statement to code")
-        
-        # ALWAYS validate the code (even if user provided it)
+        # Final validation
         validation = validate_strategy(code)
         if not validation['valid']:
             return JSONResponse({
