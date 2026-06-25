@@ -14,7 +14,7 @@ from datetime import datetime
 # Add parent directory to path for backend imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ai_generator import generate_strategy_code, validate_strategy, cleanup_strategy_code
+from ai_generator import generate_strategy_code, validate_strategy, validate_and_fix
 from backtester import run_backtest
 from memory_system import store_backtest, get_insights
 from strategy_scorer import score_strategy
@@ -110,8 +110,13 @@ async def generate_strategy(
             else:
                 return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
         
-        # Validate the generated code
-        validation = validate_strategy(generated['code'])
+        # Enhanced validation with auto-fix
+        validation = validate_and_fix(generated['code'])
+        
+        # If auto-fix was applied, use the fixed code
+        if validation.get('fixes_applied') and len(validation['fixes_applied']) > 0:
+            generated['code'] = validation['code']
+            generated['reasoning'] = generated.get('reasoning', '') + f" [Auto-fixed: {', '.join(validation['fixes_applied'])}]"
         
         return JSONResponse({
             'success': True,
@@ -167,9 +172,6 @@ async def run_backtest_endpoint(
             code = generated['code']
         else:
             code = generated_code
-        
-        # CRITICAL: Clean up any trailing code before validation and execution
-        code = cleanup_strategy_code(code)
         
         # Validate the code
         validation = validate_strategy(code)

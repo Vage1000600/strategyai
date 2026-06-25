@@ -10,12 +10,6 @@ from datetime import datetime
 import ccxt
 import logging
 
-# Import cleanup function from ai_generator
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ai_generator import cleanup_strategy_code
-
 # Debug logging setup
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -61,13 +55,6 @@ class Backtester:
             local_ns = {'__builtins__': safe_builtins}
             
             logger.debug("🔧 Executing strategy code in sandbox...")
-            print(f"[BACKTEST] Strategy code length: {len(strategy_code)} chars")
-            
-            # CRITICAL: Clean up any trailing code before execution
-            strategy_code = cleanup_strategy_code(strategy_code)
-            print(f"[BACKTEST] Cleaned code length: {len(strategy_code)} chars")
-            print(f"[BACKTEST] Strategy code (first 500 chars): {strategy_code[:500]}")
-            print(f"[BACKTEST] Strategy code (last 200 chars): {strategy_code[-200:]}")
             try:
                 exec(strategy_code, local_ns, local_ns)
                 logger.debug("✅ Strategy code executed successfully")
@@ -104,7 +91,7 @@ class Backtester:
                     logger.error("❌ strategy_func is not callable")
                     return {"error": "Strategy function is not callable"}
                 
-                logger.debug(f"🔧 Calling strategy_func with data_full (type={type(data_full)})")
+    logger.debug(f"🔧 Calling strategy_func with data_full (type={type(data_full)})")
                 logger.debug(f"   data_full keys: {list(data_full.keys())}")
                 logger.debug(f"   strategy_func source (first 500 chars): {str(strategy_func)[:500]}")
                 
@@ -162,29 +149,15 @@ class Backtester:
             peak_equity = self.initial_capital
             
             # Run through each candle (use pre-computed signals)
-            print(f"[BACKTEST] Starting backtest loop with {len(df)} candles...")
-            print(f"[BACKTEST] buy_signals_full length: {len(buy_signals_full)}, sell_signals_full length: {len(sell_signals_full)}")
-            print(f"[BACKTEST] First 5 buy signals: {buy_signals_full[:5]}, First 5 sell signals: {sell_signals_full[:5]}")
-            
-            for i in range(1, min(len(df), 100)):  # Limit to first 100 candles for debugging
-                try:
-                    # Log EVERY candle for debugging
-                    print(f"[BACKTEST] Candle {i}: starting...")
-                    
-                    row = df.iloc[i]
-                    current_price = row['close']
-                    
-                    # Get pre-computed signals for this candle
-                    buy_signal = bool(buy_signals_full[i]) if i < len(buy_signals_full) else False
-                    sell_signal = bool(sell_signals_full[i]) if i < len(sell_signals_full) else False
-                    
-                    print(f"[BACKTEST] Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
-                    
-                except Exception as e:
-                    print(f"[BACKTEST] ERROR at candle {i}: {e}")
-                    import traceback
-                    print(f"[BACKTEST] Traceback: {traceback.format_exc()}")
-                    return {'error': f'Backtest failed at candle {i}: {str(e)}'}
+            for i in range(1, len(df)):
+                row = df.iloc[i]
+                current_price = row['close']
+                
+                # Get pre-computed signals for this candle
+                buy_signal = buy_signals_full[i] if i < len(buy_signals_full) else False
+                sell_signal = sell_signals_full[i] if i < len(sell_signals_full) else False
+                
+                logger.debug(f"📊 Candle {i}: buy={buy_signal}, sell={sell_signal}, price={current_price}")
                 
                 # Check for existing position exit
                 if position != 0:
@@ -364,8 +337,7 @@ class Backtester:
             
             logger.info(f"✅ BACKTEST COMPLETE: final_capital={final_capital}, total_trades={total_trades}, return={return_pct:.2f}%")
             logger.debug(f"📈 Equity curve length: {len(equity_curve)}, Trades: {len(trades)}")
-            print(f"[BACKTEST] ✅ COMPLETE: final_capital={final_capital}, total_trades={total_trades}, return_pct={return_pct:.2f}%")
-            print(f"[BACKTEST] Equity curve: {len(equity_curve)} points, Trades: {len(trades)}")
+            print(f"[BACKTEST] Results: final_capital={final_capital}, total_trades={total_trades}, equity_curve_len={len(equity_curve)}")
             
             return {
                 'success': True,
