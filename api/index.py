@@ -177,42 +177,47 @@ async def run_backtest_endpoint(
         if not generated_code:
             max_retries = 3
             code = None
+            last_validation = None
             
             for attempt in range(max_retries):
-                generated = generate_strategy_code(strategy_input)
-                if 'error' in generated:
+                try:
+                    generated = generate_strategy_code(strategy_input, provider=ai_provider)
+                    if 'error' in generated:
+                        print(f"[ERROR] AI generation failed: {generated['error']}")
+                        if attempt == max_retries - 1:
+                            return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
+                        continue
+                    
+                    code = generated['code']
+                    
+                    # Validate the code
+                    validation = validate_strategy(code)
+                    last_validation = validation
+                    
+                    # If validation passes, use this code
+                    if validation['valid']:
+                        print(f"[SUCCESS] Code validated on attempt {attempt + 1}")
+                        break
+                    
+                    # If validation fails, retry with error feedback
+                    print(f"[RETRY {attempt + 1}/{max_retries}] Validation failed: {validation['errors']}")
+                    if attempt < max_retries - 1:
+                        # Ask AI to fix the errors
+                        fix_prompt = f"Fix these errors: {', '.join(validation['errors'])}. Use numpy methods only (np.diff, np.convolve), NOT pandas methods (.diff, .rolling). Ensure code has 'def strategy(data):' and 'return buy_signals, sell_signals'."
+                        strategy_input = fix_prompt  # Update strategy_input for next iteration
+                except Exception as e:
+                    print(f"[ERROR] Exception in retry loop: {e}")
                     if attempt == max_retries - 1:
-                        return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
-                    continue
-                
-                code = generated['code']
-                
-                # Validate the code
-                validation = validate_strategy(code)
-                
-                # If validation passes, use this code
-                if validation['valid']:
-                    print(f"[SUCCESS] Code validated on attempt {attempt + 1}")
-                    break
-                
-                # If validation fails, retry with error feedback
-                print(f"[RETRY {attempt + 1}/{max_retries}] Validation failed: {validation['errors']}")
-                if attempt < max_retries - 1:
-                    # Ask AI to fix the errors
-                    fix_prompt = f"Fix these errors in the strategy code: {', '.join(validation['errors'])}. Ensure code has 'def strategy(data):' and 'return buy_signals, sell_signals'."
-                    generated = generate_strategy_code(fix_prompt, provider=ai_provider)
-                    if 'error' not in generated:
-                        code = generated['code']
+                        return JSONResponse({'success': False, 'error': f"Error: {str(e)}"})
             
-            # If all retries failed, apply auto-fix as last resort
-            if code and not validate_strategy(code)['valid']:
-                print(f"[AUTO-FIX] Applying automatic fixes after {max_retries} failed attempts")
-                # Wrap in strategy function if missing
-                if 'def strategy(' not in code:
-                    code = 'def strategy(data):\n    ' + code.replace('\n', '\n    ')
-                # Add return if missing
-                if 'return ' not in code:
-                    code = code.rstrip() + '\n    return np.zeros(len(data[\'close\']), dtype=bool), np.zeros(len(data[\'close\']), dtype=bool)'
+            # If all retries failed, return error
+            if not code or (last_validation and not last_validation['valid']):
+                errors = last_validation['errors'] if last_validation else ['Code generation failed']
+                return JSONResponse({
+                    'success': False,
+                    'error': f"Code validation failed after {max_retries} attempts: {', '.join(errors)}",
+                    'validation_errors': errors
+                })
         else:
             code = generated_code
         
