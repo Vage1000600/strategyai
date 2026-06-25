@@ -55,6 +55,8 @@ class Backtester:
             local_ns = {'__builtins__': safe_builtins}
             
             logger.debug("🔧 Executing strategy code in sandbox...")
+            print(f"[BACKTEST] Strategy code (first 500 chars): {strategy_code[:500]}")
+            print(f"[BACKTEST] Strategy code (last 200 chars): {strategy_code[-200:]}")
             try:
                 exec(strategy_code, local_ns, local_ns)
                 logger.debug("✅ Strategy code executed successfully")
