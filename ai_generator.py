@@ -142,14 +142,16 @@ def strategy(data):
 
 def detect_template(user_input: str) -> str:
     text = user_input.lower()
+    # Be aggressive - match common strategies
     if 'rsi' in text and 'macd' in text: return 'macd_rsi' if 'macd_rsi' in TEMPLATES else 'rsi'
-    elif 'rsi' in text: return 'rsi'
-    elif 'macd' in text: return 'macd'
-    elif 'golden' in text: return 'golden'
+    elif 'rsi' in text or 'relative strength' in text: return 'rsi'
+    elif 'macd' in text or 'moving average convergence' in text: return 'macd'
+    elif 'golden' in text or 'death cross' in text: return 'golden'
     elif 'bollinger' in text or 'band' in text: return 'bollinger'
     elif 'volume' in text: return 'volume'
     elif 'triple' in text and 'ema' in text: return 'triple_ema'
-    elif 'sma' in text or 'moving average' in text: return 'sma'
+    elif 'sma' in text or 'moving average' in text or 'crossover' in text: return 'sma'
+    elif 'buy when' in text and 'sell when' in text: return 'default'  # Generic mean-reversion
     else: return 'default'
 
 # COMPACT AI GENERATION (single function for all providers)
@@ -195,6 +197,20 @@ def generate_with_provider(prompt: str, provider: str = 'groq', api_key: str = N
         return {'error': f'{provider.title()}: {str(e)}', 'provider': provider, 'fallback': 'local'}
 
 def generate_strategy_code(user_input: str, provider: str = 'groq', api_keys: Dict = None) -> dict:
+    # First, check if we should use a template instead of generating
+    template_match = detect_template(user_input)
+    if template_match in TEMPLATES:
+        # Use template - it's already validated!
+        return {
+            'code': TEMPLATES[template_match],
+            'strategy_type': f'{template_match.title()} Template',
+            'indicators': [template_match.upper()],
+            'reasoning': f'Used pre-built {template_match} template (validated)',
+            'provider': 'local',
+            'template_used': True
+        }
+    
+    # No template match, generate with AI
     prompt = f"""Generate a COMPLETE Python trading strategy using ONLY NUMPY.
 
 ⚠️ CRITICAL: data['close'] is a NUMPY ARRAY, NOT pandas!
@@ -214,9 +230,6 @@ def strategy(data):
     gain = np.where(delta > 0, delta, 0)
     loss = np.where(delta < 0, -delta, 0)
     
-    # Example with convolve (correct):
-    avg_gain = np.convolve(gain, np.ones(14)/14, mode='valid')
-    
     # Generate boolean signals
     buy_signals = np.zeros(len(data['close']), dtype=bool)
     sell_signals = np.zeros(len(data['close']), dtype=bool)
@@ -224,12 +237,6 @@ def strategy(data):
     sell_signals[14:] = ...  # your logic
     
     return buy_signals, sell_signals  # REQUIRED!
-```
-
-❌ WRONG (pandas syntax - will fail):
-```python
-delta = data['close'].diff(1)  # ❌ .diff() is pandas!
-rolling = data['close'].rolling(14).mean()  # ❌ .rolling() is pandas!
 ```
 
 STRATEGY REQUEST: {user_input}
