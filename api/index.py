@@ -120,21 +120,14 @@ async def generate_strategy(
                 validation = validate_and_fix(generated['code'])
                 last_validation = validation
                 
-                # Be lenient - accept code that's "good enough"
                 if validation['valid']:
                     print(f"[SUCCESS] Code validated on attempt {attempt + 1}")
-                    break
-                
-                # If only warnings (no critical errors), accept it
-                critical_errors = [e for e in validation['errors'] if 'Security' in e or 'Syntax' in e]
-                if not critical_errors and validation['warnings']:
-                    print(f"[ACCEPT] Code has warnings but no critical errors: {validation['warnings']}")
                     break
                 
                 print(f"[RETRY {attempt + 1}/{max_retries}] Validation failed: {validation['errors']}")
                 
                 if attempt < max_retries - 1:
-                    fix_prompt = f"Fix these errors: {', '.join(validation['errors'])}. Use numpy methods (np.diff, np.convolve). Must have 'def strategy(data):' and 'return buy_signals, sell_signals'."
+                    fix_prompt = f"Fix these errors: {', '.join(validation['errors'])}. Use ONLY numpy (np.diff, np.convolve), NOT pandas (.diff, .rolling). Must have 'def strategy(data):' and 'return buy_signals, sell_signals'."
                     strategy_input = fix_prompt
                     
             except Exception as e:
@@ -256,10 +249,6 @@ async def run_backtest_endpoint(
                 })
         else:
             code = generated_code
-            # DEBUG: Log the code being received
-            print(f"[DEBUG] Received generated_code: {len(code)} chars")
-            print(f"[DEBUG] Code has 'def strategy': {'def strategy(' in code}")
-            print(f"[DEBUG] Code starts with: {repr(code[:200])}")
         
         # Final validation
         validation = validate_strategy(code)
@@ -278,33 +267,19 @@ async def run_backtest_endpoint(
         
         # Run backtest - use provided API key or public API
         # NOTE: api_key and api_secret are NEVER logged
-        try:
-            print(f"[BACKTEST] Starting backtest for {symbol} {timeframe}...")
-            results = run_backtest(
-                code=code,
-                symbol=symbol,
-                timeframe=timeframe,
-                initial_capital=initial_capital,
-                fee_rate=fee_rate / 100,
-                slippage=slippage / 100,
-                api_key=api_key if has_api_key else None,
-                api_secret=api_secret if has_api_key and api_secret else None,
-                validate=True,
-                position_size=position_size,
-                trailing_stop=trailing_stop
-            )
-            print(f"[BACKTEST] Result: success={results.get('success')}, pnl={results.get('pnl')}")
-            if not results.get('success'):
-                print(f"[BACKTEST] Error: {results.get('error')}")
-        except Exception as e:
-            import traceback
-            print(f"[BACKTEST] EXCEPTION: {type(e).__name__}: {e}")
-            print(f"[BACKTEST] Traceback: {traceback.format_exc()}")
-            return JSONResponse({
-                'success': False,
-                'error': f'Backtest execution failed: {str(e)}',
-                'debug': 'Check Vercel logs for full traceback'
-            })
+        results = run_backtest(
+            code=code,
+            symbol=symbol,
+            timeframe=timeframe,
+            initial_capital=initial_capital,
+            fee_rate=fee_rate / 100,
+            slippage=slippage / 100,
+            api_key=api_key if has_api_key else None,
+            api_secret=api_secret if has_api_key and api_secret else None,
+            validate=True,
+            position_size=position_size,
+            trailing_stop=trailing_stop
+        )
         
         if 'error' in results:
             error_msg = results['error']

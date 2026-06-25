@@ -141,48 +141,18 @@ def strategy(data):
 }
 
 def detect_template(user_input: str) -> str:
-    """Wide net - catch ANY strategy that sounds like common patterns"""
     text = user_input.lower()
-    
-    # RSI family - very wide net
-    if any(x in text for x in ['rsi', 'relative strength', 'overbought', 'oversold', '< 30', '> 70', 'below 30', 'above 70']):
-        return 'rsi'
-    
-    # MACD family
-    if any(x in text for x in ['macd', 'signal line', 'histogram', 'convergence divergence']):
-        return 'macd'
-    
-    # Moving average family - VERY wide
-    if any(x in text for x in ['moving average', 'sma', 'ema', 'crossover', 'cross over', 'golden cross', 'death cross', 'ma cross']):
-        if '50' in text and '200' in text: return 'golden'
-        if 'triple' in text or '3' in text: return 'triple_ema'
-        return 'sma'
-    
-    # Bollinger family
-    if any(x in text for x in ['bollinger', 'band', 'squeeze', 'breakout']):
-        return 'bollinger'
-    
-    # Volume family
-    if any(x in text for x in ['volume', 'spike', 'unusual volume', 'high volume']):
-        return 'volume'
-    
-    # Mean reversion - very common pattern
-    if any(x in text for x in ['mean reversion', 'revert', 'pullback', 'dip buy', 'buy the dip']):
-        return 'rsi'  # RSI is good for mean reversion
-    
-    # Momentum - use MACD
-    if any(x in text for x in ['momentum', 'trend following', 'breakout']):
-        return 'macd'
-    
-    # Generic buy/sell patterns
-    if 'buy when' in text or 'sell when' in text or 'enter when' in text or 'exit when' in text:
-        return 'default'
-    
-    # If it mentions any indicator, try to match
-    if any(x in text for x in ['indicator', 'strategy', 'trading']):
-        return 'default'  # Use generic template
-    
-    return 'default'
+    # Be aggressive - match common strategies
+    if 'rsi' in text and 'macd' in text: return 'macd_rsi' if 'macd_rsi' in TEMPLATES else 'rsi'
+    elif 'rsi' in text or 'relative strength' in text: return 'rsi'
+    elif 'macd' in text or 'moving average convergence' in text: return 'macd'
+    elif 'golden' in text or 'death cross' in text: return 'golden'
+    elif 'bollinger' in text or 'band' in text: return 'bollinger'
+    elif 'volume' in text: return 'volume'
+    elif 'triple' in text and 'ema' in text: return 'triple_ema'
+    elif 'sma' in text or 'moving average' in text or 'crossover' in text: return 'sma'
+    elif 'buy when' in text and 'sell when' in text: return 'default'  # Generic mean-reversion
+    else: return 'default'
 
 # COMPACT AI GENERATION (single function for all providers)
 def generate_with_provider(prompt: str, provider: str = 'groq', api_key: str = None) -> dict:
@@ -229,8 +199,6 @@ def generate_with_provider(prompt: str, provider: str = 'groq', api_key: str = N
 def generate_strategy_code(user_input: str, provider: str = 'groq', api_keys: Dict = None) -> dict:
     # First, check if we should use a template instead of generating
     template_match = detect_template(user_input)
-    
-    # Use template if found (wide net catches most strategies)
     if template_match in TEMPLATES:
         # Use template - it's already validated!
         return {
@@ -242,25 +210,40 @@ def generate_strategy_code(user_input: str, provider: str = 'groq', api_keys: Di
             'template_used': True
         }
     
-    # No template match, generate with AI (with loose validation)
-    prompt = f"""Generate a Python trading strategy.
+    # No template match, generate with AI
+    prompt = f"""Generate a COMPLETE Python trading strategy using ONLY NUMPY.
 
-FORMAT:
+⚠️ CRITICAL: data['close'] is a NUMPY ARRAY, NOT pandas!
+
+✅ DO use: np.diff(), np.convolve(), np.roll(), np.cumsum()
+❌ DON'T use: .diff(), .rolling(), .shift() (these are pandas methods!)
+
+REQUIRED FORMAT:
 ```python
 import numpy as np
 
 def strategy(data):
-    # data has: 'close', 'open', 'high', 'low', 'volume' (numpy arrays)
-    # Use numpy: np.diff(), np.convolve(), np.roll()
-    # Return: buy_signals (bool), sell_signals (bool)
-    return buy_signals, sell_signals
+    # data['close'] is a numpy array (NOT pandas!)
+    
+    # Example RSI with numpy (correct):
+    delta = np.diff(data['close'])  # ✅ numpy
+    gain = np.where(delta > 0, delta, 0)
+    loss = np.where(delta < 0, -delta, 0)
+    
+    # Generate boolean signals
+    buy_signals = np.zeros(len(data['close']), dtype=bool)
+    sell_signals = np.zeros(len(data['close']), dtype=bool)
+    buy_signals[14:] = ...  # your logic
+    sell_signals[14:] = ...  # your logic
+    
+    return buy_signals, sell_signals  # REQUIRED!
 ```
 
-STRATEGY: {user_input}
+STRATEGY REQUEST: {user_input}
 
-Respond with code only."""
+Respond with code only, NO explanations. Use ONLY numpy, NOT pandas!"""
     
-    if provider == 'local': provider = 'groq'
+    if provider == 'local': provider = 'groq'  # Local uses embedded Groq
     key = (api_keys or {}).get(provider) if provider != 'groq' else GROQ_API_KEY
     return generate_with_provider(prompt, provider, key)
 
