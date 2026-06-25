@@ -113,6 +113,15 @@ async def generate_strategy(
         # Enhanced validation with auto-fix
         validation = validate_and_fix(generated['code'])
         
+        # Check if validation failed - return error to user
+        if not validation.get('valid', False):
+            return JSONResponse({
+                'success': False,
+                'error': 'Validation failed: ' + ', '.join(validation.get('errors', [])),
+                'validation_errors': validation.get('errors', []),
+                'validation_warnings': validation.get('warnings', [])
+            })
+        
         # If auto-fix was applied, use the fixed code
         if validation.get('fixes_applied') and len(validation['fixes_applied']) > 0:
             generated['code'] = validation['code']
