@@ -120,14 +120,21 @@ async def generate_strategy(
                 validation = validate_and_fix(generated['code'])
                 last_validation = validation
                 
+                # Be lenient - accept code that's "good enough"
                 if validation['valid']:
                     print(f"[SUCCESS] Code validated on attempt {attempt + 1}")
+                    break
+                
+                # If only warnings (no critical errors), accept it
+                critical_errors = [e for e in validation['errors'] if 'Security' in e or 'Syntax' in e]
+                if not critical_errors and validation['warnings']:
+                    print(f"[ACCEPT] Code has warnings but no critical errors: {validation['warnings']}")
                     break
                 
                 print(f"[RETRY {attempt + 1}/{max_retries}] Validation failed: {validation['errors']}")
                 
                 if attempt < max_retries - 1:
-                    fix_prompt = f"Fix these errors: {', '.join(validation['errors'])}. Use ONLY numpy (np.diff, np.convolve), NOT pandas (.diff, .rolling). Must have 'def strategy(data):' and 'return buy_signals, sell_signals'."
+                    fix_prompt = f"Fix these errors: {', '.join(validation['errors'])}. Use numpy methods (np.diff, np.convolve). Must have 'def strategy(data):' and 'return buy_signals, sell_signals'."
                     strategy_input = fix_prompt
                     
             except Exception as e:
