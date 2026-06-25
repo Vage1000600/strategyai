@@ -101,26 +101,55 @@ async def generate_strategy(
         if claude_api_key:
             api_keys['claude'] = deobfuscate_key(claude_api_key)
         
-        # Generate code with selected provider
-        generated = generate_strategy_code(strategy_input, provider=ai_provider, api_keys=api_keys)
-        if 'error' in generated:
-            # If provider failed and has fallback, try local
-            if generated.get('fallback') == 'local':
-                generated = generate_strategy_code(strategy_input, provider='local')
-            else:
-                return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
+        # RETRY LOOP: Generate → Validate → Retry on error
+        max_retries = 3
+        generated = None
+        last_validation = None
         
-        # Enhanced validation with auto-fix
-        validation = validate_and_fix(generated['code'])
+        for attempt in range(max_retries):
+            try:
+                generated = generate_strategy_code(strategy_input, provider=ai_provider, api_keys=api_keys)
+                if 'error' in generated:
+                    if generated.get('fallback') == 'local':
+                        generated = generate_strategy_code(strategy_input, provider='local', api_keys=api_keys)
+                    if 'error' in generated:
+                        if attempt == max_retries - 1:
+                            return JSONResponse({'success': False, 'error': f"AI Error: {generated['error']}"})
+                        continue
+                
+                validation = validate_and_fix(generated['code'])
+                last_validation = validation
+                
+                if validation['valid']:
+                    print(f"[SUCCESS] Code validated on attempt {attempt + 1}")
+                    break
+                
+                print(f"[RETRY {attempt + 1}/{max_retries}] Validation failed: {validation['errors']}")
+                
+                if attempt < max_retries - 1:
+                    fix_prompt = f"Fix these errors: {', '.join(validation['errors'])}. Use ONLY numpy (np.diff, np.convolve), NOT pandas (.diff, .rolling). Must have 'def strategy(data):' and 'return buy_signals, sell_signals'."
+                    strategy_input = fix_prompt
+                    
+            except Exception as e:
+                print(f"[ERROR] Exception in retry loop: {e}")
+                if attempt == max_retries - 1:
+                    return JSONResponse({'success': False, 'error': f"Error: {str(e)}"})
         
-        # Check if validation failed - return error to user
-        if not validation.get('valid', False):
+        if not generated or (last_validation and not last_validation['valid']):
+            errors = last_validation['errors'] if last_validation else ['Generation failed']
             return JSONResponse({
                 'success': False,
-                'error': 'Validation failed: ' + ', '.join(validation.get('errors', [])),
-                'validation_errors': validation.get('errors', []),
-                'validation_warnings': validation.get('warnings', [])
+                'error': f"Validation failed after {max_retries} attempts: {', '.join(errors)}",
+                'validation_errors': errors
             })
+        
+        # Auto-fix if needed
+        if validation.get('fixes_applied'):
+            generated['code'] = validation['code']
+            generated['reasoning'] = generated.get('reasoning', '') + f" [Auto-fixed: {', '.join(validation['fixes_applied'])}]"
+        
+        # Update validation for response
+        validation = validate_strategy(generated['code'])
         
         # If auto-fix was applied, use the fixed code
         if validation.get('fixes_applied') and len(validation['fixes_applied']) > 0:
