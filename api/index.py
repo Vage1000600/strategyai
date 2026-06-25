@@ -182,6 +182,10 @@ async def run_backtest_endpoint(
         else:
             code = generated_code
         
+        # DEBUG: Log the code being received
+        print(f"[DEBUG] Received code length: {len(code)} chars")
+        print(f"[DEBUG] Code starts with: {code[:100]}")
+        
         # ALWAYS validate the code (even if user provided it)
         validation = validate_strategy(code)
         if not validation['valid']:
