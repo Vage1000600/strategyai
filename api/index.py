@@ -184,7 +184,9 @@ async def run_backtest_endpoint(
         
         # DEBUG: Log the code being received
         print(f"[DEBUG] Received code length: {len(code)} chars")
-        print(f"[DEBUG] Code starts with: {code[:100]}")
+        print(f"[DEBUG] Code starts with: {repr(code[:200])}")
+        print(f"[DEBUG] Code has 'def strategy': {'def strategy(' in code}")
+        print(f"[DEBUG] Code has 'import numpy': {'import numpy' in code}")
         
         # ALWAYS validate the code (even if user provided it)
         validation = validate_strategy(code)
