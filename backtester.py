@@ -10,6 +10,12 @@ from datetime import datetime
 import ccxt
 import logging
 
+# Import cleanup function from ai_generator
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from ai_generator import cleanup_strategy_code
+
 # Debug logging setup
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -55,6 +61,11 @@ class Backtester:
             local_ns = {'__builtins__': safe_builtins}
             
             logger.debug("🔧 Executing strategy code in sandbox...")
+            print(f"[BACKTEST] Strategy code length: {len(strategy_code)} chars")
+            
+            # CRITICAL: Clean up any trailing code before execution
+            strategy_code = cleanup_strategy_code(strategy_code)
+            print(f"[BACKTEST] Cleaned code length: {len(strategy_code)} chars")
             print(f"[BACKTEST] Strategy code (first 500 chars): {strategy_code[:500]}")
             print(f"[BACKTEST] Strategy code (last 200 chars): {strategy_code[-200:]}")
             try:
