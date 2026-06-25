@@ -1022,12 +1022,6 @@ def get_html_page():
                     </div>
                 </div>
             </div>
-=======
-        <div id="api_status" class="status-badge public">
-          <i data-lucide="globe" id="status_icon"></i>
-          <span id="status_text">Using public API</span>
->>>>>>> 2020894 (updated UI)
-        </div>
 
         <div class="field-group">
           <label class="field-label">
@@ -1768,25 +1762,25 @@ def get_html_page():
           vb.className = 'val-bar fail';
           vb.innerHTML = '<i data-lucide="x-circle"></i> Validation failed: ' + data.validation.errors.join(', ');
         }
-<<<<<<< HEAD
         
         // Update API status based on input
         function updateApiStatus() {
             const apiKey = document.getElementById('api_key').value.trim();
             const apiSecret = document.getElementById('api_secret').value.trim();
             const statusDiv = document.getElementById('api_status');
-            const statusIcon = document.getElementById('api_status_icon');
-            const statusText = document.getElementById('api_status_text');
+            const statusIcon = document.getElementById('status_icon');
+            const statusText = document.getElementById('status_text');
             
             if (apiKey && apiSecret) {
-                statusDiv.className = 'api-status connected';
-                statusIcon.textContent = '✅';
-                statusText.textContent = 'Using your Bitget API key';
+                statusDiv.className = 'status-badge connected';
+                statusIcon.setAttribute('data-lucide', 'check-circle-2');
+                statusText.textContent = 'Connected — using your Bitget key';
             } else {
-                statusDiv.className = 'api-status public';
-                statusIcon.textContent = '🌐';
+                statusDiv.className = 'status-badge public';
+                statusIcon.setAttribute('data-lucide', 'globe');
                 statusText.textContent = 'Using public API';
             }
+            lucide.createIcons();
         }
         
         // Listen for input changes
@@ -1794,9 +1788,7 @@ def get_html_page():
         document.getElementById('api_secret').addEventListener('input', updateApiStatus);
         
         // API Key encryption indicators
-        ['deepseek_api_key', 'claude_api_key'].forEach(id => {
-            const input = document.getElementById(id);
-            const status = document.getElementById(id.replace('_api_key', '-encrypt-status'));
+        [['deepseek_api_key','dot-deepseek'],['claude_api_key','dot-claude']].forEach(([id, dotId]) => {
             if (input && status) {
                 input.addEventListener('input', () => {
                     if (input.value.length > 0) {
@@ -2033,33 +2025,6 @@ def get_html_page():
         // Initialize status on load
         updateApiStatus();
     </script>
-=======
-        document.getElementById('generated_code').innerHTML = hlCode(data.code);
-        document.getElementById('code_review').classList.remove('hidden');
-        lucide.createIcons();
-      } else {
-        showError(data.error);
-      }
-    } catch(e) { showError(e.message); }
-    finally { hideLoading(); }
-  }
-
-  async function runBacktestFromCode() {
-    if (!currentCode) return;
-    showLoading();
-    const fd = new FormData();
-    fd.append('strategy_input', document.getElementById('strategy_input').value);
-    fd.append('symbol',   document.getElementById('symbol').value);
-    fd.append('timeframe', getTF());
-    fd.append('generated_code', currentCode);
-    fd.append('position_size',  document.getElementById('position_size').value);
-    fd.append('trailing_stop',  document.getElementById('trailing_stop').value);
-    const ak = document.getElementById('api_key').value.trim();
-    const as_ = document.getElementById('api_secret').value.trim();
-    if (ak)  fd.append('api_key', ak);
-    if (as_) fd.append('api_secret', as_);
-    try {
-      const res  = await fetch('/backtest', { method:'POST', body:fd });
       const data = await res.json();
       if (data.success && data.metrics) {
         const m = data.metrics;
@@ -2122,6 +2087,5 @@ def get_html_page():
   // Init
   refreshStatus();
 </script>
->>>>>>> 2020894 (updated UI)
 </body>
 </html>"""
