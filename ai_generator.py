@@ -195,23 +195,35 @@ def generate_with_provider(prompt: str, provider: str = 'groq', api_key: str = N
         return {'error': f'{provider.title()}: {str(e)}', 'provider': provider, 'fallback': 'local'}
 
 def generate_strategy_code(user_input: str, provider: str = 'groq', api_keys: Dict = None) -> dict:
-    prompt = f"""Generate Python trading strategy code.
+    prompt = f"""Generate a COMPLETE Python trading strategy.
 
-REQUIRED FORMAT:
+CRITICAL REQUIREMENTS:
+1. MUST have: import numpy as np
+2. MUST have: def strategy(data):
+3. MUST calculate buy_signals and sell_signals
+4. MUST end with: return buy_signals, sell_signals
+
+Example format:
 ```python
 import numpy as np
 
 def strategy(data):
-    # data has: 'close', 'open', 'high', 'low', 'volume' (numpy arrays)
-    # Return: buy_signals (bool array), sell_signals (bool array)
-    return buy_signals, sell_signals
+    # Your strategy logic here
+    # data['close'], data['open'], data['high'], data['low'], data['volume']
+    
+    # Calculate your indicator
+    # ...
+    
+    # Generate signals
+    buy_signals = ...  # boolean array
+    sell_signals = ...  # boolean array
+    
+    return buy_signals, sell_signals  # REQUIRED!
 ```
 
-RULES: 1) Use ONLY numpy  2) No look-ahead bias  3) Handle edge cases
+STRATEGY REQUEST: {user_input}
 
-STRATEGY: {user_input}
-
-Respond with code only."""
+Respond with code only, NO explanations."""
     
     if provider == 'local': provider = 'groq'  # Local uses embedded Groq
     key = (api_keys or {}).get(provider) if provider != 'groq' else GROQ_API_KEY

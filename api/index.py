@@ -189,6 +189,12 @@ async def run_backtest_endpoint(
             code = 'def strategy(data):\n    ' + code.replace('\n', '\n    ')
             print(f"[FIX] Added def strategy(data) wrapper to code")
         
+        # POST-PROCESS: Ensure code has return statement
+        if 'return ' not in code:
+            # Add return statement at the end
+            code = code.rstrip() + '\n    return np.zeros(len(data[\'close\']), dtype=bool), np.zeros(len(data[\'close\']), dtype=bool)'
+            print(f"[FIX] Added return statement to code")
+        
         # ALWAYS validate the code (even if user provided it)
         validation = validate_strategy(code)
         if not validation['valid']:
